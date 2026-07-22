@@ -1,243 +1,381 @@
-# Document Management System — Project Plan
+# File Management System — Project Definition
 
-> Structured by SDLC stage: Planning → Requirements → Design → Implementation → Testing → Deployment → Operations.
-> Read top to bottom: it starts with why the project exists and ends with how it runs after delivery.
-> Last revised 2026-07-16 after three design-review sessions (the third produced [SCHEMA.md](SCHEMA.md)).
+> **Status:** Planning and Requirements. Covers *problem, solution, scope, success criteria, requirements, and limitations*.
+> Design, data model, and implementation are **not yet defined** and are deliberately absent (§10).
+> Produced 2026-07-22 across two design-review sessions. Supersedes all earlier plans in this repo.
 
-## Roadmap at a glance
-
-| # | SDLC stage | What happens | Exit criteria |
-|---|---|---|---|
-| 1 | Planning | Problem, goals, scope, success criteria agreed | This document approved |
-| 2 | Requirements | What the system must do, for whom, under what constraints | Requirements below confirmed by stakeholders |
-| 3 | Design | Architecture, data model, authorization, UI approach | Design reviewed; no open structural questions |
-| 4 | Implementation | Build in 4 phases (A–D), each independently verifiable | Each phase passes its tests + quality gate |
-| 5 | Testing | Automated suite + manual smoke + retrieval drill | All green; drill meets the 1-minute target |
-| 6 | Deployment | Install on the on-premises server, seed accounts, go live | Departments can log in and encode documents |
-| 7 | Operations | Backlog encoding, backups, monitoring, future needs | Ongoing — reviewed against success criteria |
+**Design principle agreed in review:** *the system's job is to make work findable, not to eliminate work.*
+Where a choice is between "less staff effort" and "more reliable data," this project chooses reliable data.
 
 ---
 
-## 1. Planning
+## 1. Problem
 
-### 1.1 The problem (starting point)
+A provincial office keeps **100% of its records on paper**. Roughly **95% of the archive has no soft copy at all.**
 
-All of the organization's records are physical documents — roughly **1,500 letters, meeting minutes, memos, and official records** — and finding a specific one is slow and unreliable. Locating "the letter from the mayor's office about the March 2025 budget" means digging through cabinets. Documents are effectively invisible once filed; there is no access control, no recovery for misfiled papers, and no way to know what exists.
+Retrieving a document is slow and unreliable:
 
-### 1.2 The goal (end point)
+1. **Searching is physical.** Locating a file from 2022 means walking into a storage room and going through a large volume of paper by hand. It takes **15–30 minutes**, and going faster means pulling **additional staff off their own work** to search alongside.
+2. **The search can end in a guess.** After 30 minutes, someone may conclude the file "is probably at the storage building" — **without assurance**. Acting on that guess means a trip across the city that may be wasted.
+3. **The paper does not stay put.** After **3–4 years**, documents are transferred out of the office to a **central storage building elsewhere in the city** — a shared archive for the whole organization, not a neighboring room. A clerk can spend 30 minutes searching the office for a file **that was never there**.
+4. **There is no record of what exists.** The office cannot answer "do we have this document, and where is it right now?" without a manual search.
 
-A web application where those documents live as scanned digital files, organized by department, **findable in seconds** by searching name, type, date, source, or description — with a pointer back to where each paper original physically lives. Think "private, on-premises Google Drive for a paper-based office."
+**The underlying problem is not that documents are on paper. It is that the office has no index of what it holds or where it is.**
 
-### 1.3 Success criteria (how we know we arrived)
+### 1.1 Why nothing has solved this already
 
-1. **Retrieval time**: a staff member locates any encoded document in under ~1 minute via search/metadata (vs. minutes-to-hours in cabinets).
-2. **Adoption**: each department encodes its incoming documents and treats the system as the first place to look.
-3. **Nothing lost**: every encoded document is retrievable — digitally, and physically via its location field; accidental deletions are recoverable from trash.
-4. **Technical acceptance**: the full verification in §5 passes.
+- **No IT support** — not in this office, and not in the wider organization. Provincial area.
+- **No authority to compel one.** The office head cannot demand support from other units; every unit is focused on its own work.
+- **The office has been skipped.** Other offices in the organization have systems; this one has never had anything built for it.
+- **Shared network drives are not practiced** and there is no one to administer them.
 
-### 1.4 Scope
-
-**In scope:** everything in §2 Requirements, built and verified per §4–§5. The system must make bulk encoding efficient (batch upload with shared metadata), because ~1,500 backlog documents will be encoded through it.
-
-**Out of scope (explicit):**
-- **The encoding labor itself** — scanning/uploading the 1,500-document backlog is an operational effort that starts after delivery (§7). The project is done when the system is ready, not when the archive is full.
-- **OCR / full-text search** of scan contents (future enhancement; metadata search is the v1 answer).
-- Per-folder/per-file permissions (access is per-department + role).
-- External sharing links, self-registration, email flows, cloud storage, per-team quotas.
-- Bulk import of existing digital files (there are none — the archive is paper).
-
-### 1.5 Constraints
-
-- Runs on a **single on-premises server**; no cloud services, no internet-dependent features, no email.
-- Backups are handled **outside the app** (disk snapshots) — consciously accepted; must be verified before real documents go in (§7).
-- Built on the existing Laravel 13 + Inertia v3 + React 19 starter kit already in this repo.
-
-### 1.6 Key risks (accepted, with revisit triggers)
-
-- **Metadata discipline**: search is only as good as the metadata typed in. Mitigated by batch defaults and a fixed type list; revisit (required fields or OCR) if searches start failing.
-- **Encoding throughput**: ~1,500 documents at ~3 min each ≈ 75 hours of labor. Out of dev scope, but the org must staff it or success criteria 2–3 never happen.
-- **No storage quota**: one department can fill the shared disk. Revisit when the dashboard storage stat (§4, Phase D) shows pressure.
-- **Access granularity**: settled on department-wide read-only vs full roles; per-folder permissions would be a redesign, not an extension.
-
-### 1.7 Kill criteria (when to stop and rethink)
-
-- Per-folder/per-file permissions requested mid-build → stop and redesign authorization first.
-- The retrieval drill (§5.3) fails — people can't find documents via metadata → OCR/full-text becomes v2's centerpiece; don't bolt it on mid-v1.
-- Files >25 MB or a second app server required → the local-disk, single-request-upload approach needs rework (S3 / chunked upload).
-- Users need self-registration or external share links → the local-only auth foundation is wrong.
-- Stakeholders ask to log *downloads* in the activity log → don't just enable it; that reopens the volume/retention decision deliberately closed in the schema review.
+Left alone, this problem persists for another decade.
 
 ---
 
-## 2. Requirements
+## 2. Goal
 
-### 2.1 Users and roles
+A locally-hosted web application that acts as a **searchable index over the paper archive**, so that staff can:
 
-| User | What they can do |
+- find whether a document exists, in seconds, by searching its details;
+- open and read a scanned copy without leaving their desk;
+- **know where the paper original physically is** — still in the office, or already moved to the central storage building — *before* anyone walks anywhere.
+
+---
+
+## 3. Proposed solution (v1)
+
+### 3.1 How documents get in
+
+1. Office staff scan paper using a scanning machine. **PDF conversion happens outside the system.**
+2. A staff member with **editor** access uploads the PDF and fills in its details.
+3. Two things are stored: **the PDF file** (the payload) and **a metadata record** (the index card) pointing to it.
+
+The primary engine for filling the archive is the **retrieval workflow itself** — see §6.3.
+
+### 3.2 How documents are found
+
+Search queries **the metadata only** — the system never reads inside the PDF. Documents are described by:
+
+- **Business name** and **location**
+- Document **date**
+- Document **type**
+- Title / subject, person or entity concerned
+
+Search matches these fields, returns the matching records, and opening a result serves the PDF.
+
+> **Consequence, accepted deliberately:** the metadata card is the *only* way in. A document with no card, or a wrong card, is invisible even though the file exists on disk.
+
+### 3.3 Keeping business names consistent
+
+Business name and location are the primary way documents are found, so they cannot be free-typed inconsistently. `ABC Corp` and `ABC Corporation` as two separate entries would split a business's history in half and make searches return only part of it.
+
+**v1 approach — controlled vocabulary with typeahead suggestion:** when a user types a business name, the system shows existing matches so they select the established entry instead of retyping it.
+
+**This is suggest-only, not enforced.** A user may still create a new entry despite a suggested match. Duplicates become *rare*, not impossible — chosen knowingly, to avoid blocking legitimately similar new businesses and to keep backlog encoding fast.
+
+The same business list also powers the three-state search result in §6.1.
+
+### 3.4 Tracking where the paper is
+
+Each document record carries the **current physical location** of its paper original — in the office, or transferred to the central storage building.
+
+To keep this accurate, updates are **driven by the paper itself**, not by memory:
+
+- A **QR code is generated and attached to the physical document.**
+- Documents are **consolidated into a batch first**, then transferred.
+- An editor **scans each document's QR code** to mark its new status/location.
+
+Scanning each document is manual effort, and that is accepted — it is effort that produces truth.
+
+### 3.5 Access and accountability
+
+- **Viewing is open to all staff accounts.** This mirrors physical reality: the storage room is not locked to individuals; the *office* is. Any employee of the office can already access any file.
+- **Editing is restricted**, so responsibility for any change has a clear owner.
+- **Access is logged at the point the PDF is served** — recording who, which document, when, and the action (view / download / print). Search result listings are *not* logged; they are metadata only and logging them would be noise.
+
+### 3.6 Deployment and connectivity
+
+**On-premises, local server only.** The application is installed and run on a machine inside the office. It is **not hosted in the cloud and not reachable from outside the office network.** The data is sensitive business information the office wants to keep physically within the office.
+
+**Normal operation requires no internet.** Scanning, uploading, searching, viewing, printing, and QR status updates all work on the local network with the connection down.
+
+**One deliberate exception — outbound email.** Password recovery sends mail through an external SMTP service (Google). This is outbound only; it does not expose the system to inbound access. It is the single feature that depends on the office's internet connection, and it degrades gracefully: if the connection is down, **admin-initiated password reset (§6.5) remains available in person**, so no one is ever locked out waiting for a network.
+
+---
+
+## 4. Scope
+
+### 4.1 In scope for v1
+
+- PDF upload with metadata entry
+- Metadata-based search with three-state results (§6.1)
+- Controlled business vocabulary with typeahead duplicate suggestion
+- Known-business list, seeded before launch and grown by use (§6.2)
+- Physical location tracking (office / central storage building)
+- QR code generation and scan-to-update-status
+- Roles: viewer, editor, admin (§6.4)
+- Account administration, password recovery, and session revocation (§6.5)
+- Access logging on document serving (view / download / print)
+- Search logging for success measurement (§5.3)
+- Metadata change history with revert (§6.7)
+- File version history on scan replacement (§6.7)
+- Deletion request/approval workflow with soft delete and 90-day retention (§6.7)
+- Local on-premises deployment
+
+### 4.2 Out of scope for v1 (explicit)
+
+| Excluded | Note |
 |---|---|
-| **Department staff — viewer** | Search, read, and download their department's documents |
-| **Department staff — editor** | Everything a viewer does, plus upload documents, fill in metadata, organize folders, move items to trash and restore them |
-| **Department admin** | Everything an editor does, plus manage who is in the department and their roles, permanently delete documents, empty the trash |
-| **Super-admin (IT/records officer)** | Creates user accounts and departments; can do anything a department admin can |
+| **OCR / full-text search of scan contents** | **Deferred to v2, not abandoned.** See §4.4. |
+| Cloud hosting or access from outside the office | Contradicts §3.6 |
+| Issuing certified/official copies | Printouts are internal reference only (§7.6) |
+| Blocking or auto-merging duplicate business entries | Suggest-only by decision (§3.3) |
+| Second-person verification of entered metadata | Would stall backlog throughput |
+| Confirmed-miss tracking (linking an upload to the failed search that caused it) | Would add labor to a rushed clerk; search logs alone are accepted (§5.3) |
+| Automated backups inside the application | Handled outside the app — and unowned (§8.1) |
+| The scanning and encoding labor itself | An operational effort, not a deliverable |
+| Retroactive QR tagging of undigitized backlog | Only digitized documents get QR codes |
+| Self-registration | Accounts are created by an admin (§6.5) |
 
-No self-registration — accounts are created by the super-admin. A user can belong to multiple departments, with a possibly different role in each, and switches between them in the sidebar.
+### 4.3 Rollout scope — what exists on launch day
 
-### 2.2 Functional requirements
+The system launches **neither empty nor complete**: approximately **10% of the archive — the most in-demand documents — is pre-scanned before go-live.**
 
-1. **Store scanned documents** — multi-file upload (up to 25 MB per file) with a progress bar.
-2. **Describe documents** — each file carries metadata: document type (letter, minutes, memo, …), document date, source/office, free-text description, and the **physical location of the paper original** (cabinet/box) so the signed original can still be retrieved.
-3. **Batch encoding** — shared metadata can be entered once and applied to a whole upload batch (a box of similar documents), then refined per file.
-4. **Find documents fast** — search matches file name, description, source; filter by type; results scoped to the user's department, never including trashed items.
-5. **Organize** — folder tree per department (create, rename, move, delete), breadcrumb navigation. Renaming/moving never loses a file.
-6. **Control access** — documents belong to a department; only its members see them; viewers cannot change anything.
-7. **Recover mistakes** — deleted items go to trash with restore; only department admins can delete forever or empty the trash.
-8. **Administer locally** — super-admin manages accounts (create/edit/deactivate), departments, and membership from an admin area; deactivated users are logged out but their upload history is preserved.
-9. **Accountability** — every change to documents, folders, and membership is recorded (who, what, when) in an activity log. Mutations only — downloads are deliberately not logged. Team admins can review their department's activity.
+Rationale: a system requiring the full backlog before launch is unusable for the year-plus it takes to fill, while a system launched empty has nothing to offer. Seeding the hot 10% lets real usage begin immediately and tests the encoding process on a small batch before the whole archive is committed to it.
 
-### 2.3 Non-functional requirements
+**Priority rule (a clerk can follow this without asking):**
 
-- **Security**: authenticated access only; every download authorized; cross-department access impossible; login supports two-factor and passkeys (already in the starter kit).
-- **Storage**: files on the server's local private disk (`storage/app/private`), never publicly reachable.
-- **Limits**: 25 MB/file, any file type, config-driven so it can change without code edits.
-- **Quality**: automated tests for every behavior, static analysis (PHPStan level 7), formatted code — enforced by the repo's CI gate.
+1. **All businesses that made a request at the office this year** — highest demand.
+2. **Previous year**, active business requests not yet case-closed.
+3. **2024**, then progressively older years.
+4. **2024 and older:** included at the decision of the office head/manager.
+5. **Demand-trigger override:** any document, however old, whose business makes a request **this year** becomes in-demand *by definition* and is uploaded and included.
+
+The **office head defines which businesses qualify.**
+
+After go-live, the archive fills through the retrieval workflow itself (§6.3) rather than through a separate encoding project.
+
+### 4.4 Planned for v2 — OCR
+
+OCR is **deliberately sequenced after v1, not dropped.** With OCR, a third artifact is stored per upload: the **text extracted from the scan**, making documents searchable by their actual contents — a permit number, an address, a name buried mid-page.
+
+Its value is that it **backs up the metadata rather than replacing it**: a mistagged document remains findable by its text, so the person doing data entry stops being a single point of failure.
+
+It is deferred because OCR quality on old, faded, stamped, or handwritten paper is unreliable, it adds background processing and deployment complexity, and PDF conversion currently happens outside the system entirely. v1 must ship the reliable path first.
 
 ---
 
-## 3. Design
+## 5. Success criteria
 
-### 3.1 Architecture
+### 5.1 Baseline (measured from current practice)
 
-The existing starter kit provides auth, settings, and the dashboard shell. The domain is added on top:
+| Measure | Today |
+|---|---|
+| Time to retrieve one document | **15–30 minutes** |
+| Staff required to go faster | Additional staff pulled off their own work |
+| Outcome quality | Search can end in an **unverified guess** that the file is at the central storage building — leading to a possibly wasted trip across the city |
 
-- **Backend**: Laravel 13 — routes render Inertia pages; controllers + Form Requests; policies for authorization; local `Storage` disk for file contents.
-- **Frontend**: React 19 + Inertia v3 pages under `resources/js/pages/`, composed from the existing shadcn/ui primitives; Wayfinder-generated route functions (never hardcoded URLs).
-- **New route files**: `routes/files.php` and `routes/admin.php`, required from `web.php` (mirrors the existing `settings.php` pattern).
+### 5.2 Targets
 
-### 3.2 Data model
+1. **Retrieval time — under 1–2 minutes** for any document that has been encoded. This is a deliberately conservative target (the software itself answers in seconds); it accounts for real conditions — a staff member logging in, typing, reading results, and printing.
+2. **Hit rate — at least 60%** of searches return the document the staff member wanted.
+   *Why a threshold matters:* below it, clerks stop opening the system first and walk straight to the storage room. A tool that fails more often than it succeeds trains people not to use it, and adoption is close to unrecoverable once lost.
+3. **No false denials.** The system must never tell staff a document does not exist (§6.1). A wrong "we have no record" told to a member of the public is a worse outcome than a slow search.
 
-Full column-level schema with ER diagram and design rationale: **[SCHEMA.md](SCHEMA.md)**. Summary:
+### 5.3 How success is measured
 
-| Table | Purpose | Key columns |
+**Search logging is a v1 requirement**, not an afterthought — without it, the 60% target is unverifiable and the project falls back to opinion.
+
+Each search records: what was searched, how many results were returned, and **whether the user opened a result.** "Searched and opened a document" is treated as a hit; "searched and opened nothing" is treated as a probable miss.
+
+**Known weakness, accepted:** this yields *probable* misses, not confirmed ones — the system cannot tell whether a clerk who opened nothing gave up, found it elsewhere, or simply changed their mind. A stronger method exists (linking each upload back to the failed search that prompted it) but was **rejected because it adds work to an already-rushed employee** (§4.2). Trend direction over time is considered sufficient.
+
+**Location accuracy has no automated measurement** and remains an open risk (§8.3).
+
+---
+
+## 6. Requirements
+
+### 6.1 Search must return one of three states — never a bare blank
+
+A blank result is useless: the clerk cannot tell "not encoded yet" from "does not exist," so they walk to the storage room anyway. Search therefore resolves to one of:
+
+| State | Meaning | What the clerk does |
 |---|---|---|
-| `teams` | A department | `name` |
-| `team_user` | Membership + role | `team_id`, `user_id`, `role` (`admin`/`editor`/`viewer`), unique pair |
-| `users` (extended) | Accounts | + `is_admin` (super-admin), `is_active`, `active_team_id` FK nullOnDelete |
-| `folders` | DB-only folder tree | `team_id`, `parent_id` self-FK, `name`, softDeletes, index(`team_id`,`parent_id`) |
-| `files` | One document | `team_id`, `folder_id` nullable, `uploaded_by` nullOnDelete, `name` (display), `path` (disk), `size`, `mime_type`, **`reference_number`, `document_type`, `document_date`, `source`, `description`, `physical_location`** (all nullable), softDeletes, indexed per SCHEMA.md |
-| `activities` | Append-only audit log (mutations only) | `team_id`, `user_id` nullOnDelete, polymorphic `subject_type`/`subject_id`, `action`, `details` JSON, `created_at` only |
+| **Found** | Business known, documents encoded | Open, read, print |
+| **Known business, nothing encoded** | The business is real; its papers are physical | Go to the room or storage building — **this converts a useless blank into a directive** |
+| **Not in the known list** | May be an older or inactive business | Check the ledger — **this is not a denial** |
 
-Sibling-name uniqueness for folders is enforced in Form Requests (nullable parent + soft deletes break a DB unique constraint). `source` is free text with UI autocomplete from the team's existing values (no lookup table).
+**The system must never state that a document or business does not exist.** The known-business list is built partly from staff recollection, which is reliable for active businesses and unreliable for dormant ones (§7.11) — precisely the case where a confident denial would do the most damage.
 
-### 3.3 Authorization model
+### 6.2 A known-business list must exist before launch
 
-- `Gate::define('admin')` = super-admin (`is_admin`).
-- `TeamPolicy`: `view` = member or super-admin; `manageMembers` = team admin or super-admin; `update`/`delete` = super-admin.
-- `FolderPolicy`/`FilePolicy`: **read** (view/download) = any member; **write** (create/update/trash/restore) = editor or team admin; **forceDelete** = team admin or super-admin. Controllers additionally scope every query to the active team.
-- **Last-admin guard**: a team must always retain at least one team admin (cannot demote/remove the final one).
-- Deactivation (`is_active` false) logs the user out via middleware instead of deleting the account, preserving upload history.
+This list is what makes §6.1 possible, and it doubles as the controlled vocabulary of §3.3 — **one artifact solves both problems.**
 
-### 3.4 Storage design
+- **Source:** the office's existing transaction logs and notebook ledgers, plus staff knowledge. The city is provincial, not a metro center, so the universe of businesses is small enough for staff to enumerate.
+- **Produced by:** staff with **editor/create** access — the same people accountable for other changes. Not viewers.
+- **When:** before go-live, alongside the 10% pilot encoding.
+- **Growth:** the list expands automatically as documents are encoded and requests are handled, so the dormant tail fills in over time rather than requiring anyone to recall it up front.
 
-- Physical layout is **flat per team**: `teams/{team_id}/{hashName}` — the folder tree exists only in the DB, so rename/move never touch the disk and can't lose files.
-- Downloads go through an authenticated route (`Storage::download` with the display name); the disk is never web-accessible.
-- Permanent delete removes the disk file via a model `forceDeleting` event.
-- Upload display-name collisions auto-suffix `name (1).ext`; rename/move rejects duplicates via validation.
-- Trash: folder delete soft-deletes the whole subtree in one transaction with a shared `deleted_at`; trash lists only top-level items; restore brings back the subtree (orphans restore to root, collisions get ` (n)` suffix).
+### 6.3 Retrieval workflow — the archive fills itself
 
-### 3.5 Configuration
+The office **never releases original documents**; every client request already requires producing a copy. The system substitutes a scan for that photocopy, so encoding costs almost no additional labor.
 
-`config/files.php`: `max_size` (25 MB) and the `document_types` list (Letter, Memo, Minutes, Report, Contract, Other) — changeable without touching code.
+**Required order when a searched document is not in the system:**
 
-### 3.6 UI design
+1. Staff searches the system → not found.
+2. Staff retrieves the paper original.
+3. Staff scans it.
+4. **Staff uploads the scan with its metadata.**
+5. **Staff prints the client's copy from the system.**
+6. Paper original is returned; the client receives the printout.
 
-- **Files page** (`pages/files/index.tsx`): breadcrumbs, search input + type filter, table of folders-then-files (name/type/date/size) with row menu: Download / Details / Rename / Move / Delete. Viewers see no write controls.
-- **Upload dialog**: multi-file picker + optional shared metadata (reference number, type, date, source, physical location) applied to the batch; source field autocompletes from the team's existing values; progress bar; fields persist between batches for fast encoding.
-- **Details dialog**: view/edit all metadata for one file (read-only for viewers).
-- **Trash page**: restore (editors+), delete forever / empty trash (team admins only), with confirm dialogs; each row shows who trashed it and when (from the activity log).
-- **Activity page**: team-scoped, paginated list of the department's activity log (team admins + super-admin).
-- **Team switcher** in the sidebar; **Admin area** (users, departments, members with role selector) visible to super-admins; member management visible to team admins.
-- New shadcn primitives needed: `table`, `alert-dialog`, `progress`, `context-menu`, `scroll-area`, `textarea`, date input.
+**The upload must precede the print.** If uploading came last — after the client is served and the clerk's real task is done — it would be a step performed *after the reward*, and such steps get skipped under pressure. Skipped uploads would mean the most in-demand documents, the ones flowing through this exact path, never enter the archive and the hit rate never climbs.
 
----
+Putting the upload **on the critical path to printing** makes the correct behavior the path of least resistance. A published office rule — *upload first, then print, for any document not yet in the system* — covers the remaining gap (§7.12).
 
-## 4. Implementation
+### 6.4 Roles
 
-Built in four phases; each ends with its tests green and the quality gate clean before the next starts.
+| Role | Can do |
+|---|---|
+| **Viewer** | Search, view, download, print any document |
+| **Editor** | Everything a viewer does, plus: upload documents and enter metadata, add and maintain business entries, generate QR codes, update physical location/status |
+| **Admin** | Everything an editor does, plus: create accounts, assign and change roles, reset passwords, deactivate users |
 
-### Phase A — Foundation: auth strip-down, departments + roles, admin area
+Viewing is intentionally unrestricted across all roles (§3.5, §7.5).
 
-- **Migrations**: `create_teams_table`; `create_team_user_table` (with `role`, default `editor`); `add_columns_to_users_table` (`is_admin`, `is_active`, `active_team_id`) — ordered after teams; `create_activities_table` (per SCHEMA.md).
-- **Models**: new `Team` (+factory), new `app/Enums/TeamRole.php`; extend `User` with `teams()` withPivot, `activeTeam()`, casts, helpers `belongsToTeam()`, `roleInTeam()`, `isTeamAdmin()`, `canEditIn()`.
-- **Auth strip-down**: `config/fortify.php` keeps only 2FA + passkeys (drop registration, password reset, email verification); remove matching view closures in `FortifyServiceProvider`, links in `login.tsx`, the `'verified'` middleware in `routes/web.php` + `routes/settings.php`; delete unused auth pages and their tests. New `EnsureUserIsActive` middleware (logout if deactivated) appended to the web group.
-- **Authorization**: `Gate::define('admin')`; `TeamPolicy` per §3.3.
-- **Controllers**: `TeamSwitchController` (invokable), `TeamMemberController` (index/store/update/destroy with last-admin guard; detaching clears the user's `active_team_id`), `Admin/UserController` (index/store/update; cannot deactivate or demote self), `Admin/TeamController` (CRUD; store assigns an initial team admin). Form Requests under `app/Http/Requests/Admin/` + member requests (role validated against the enum).
-- **Activity log foundation**: `create_activities_table` migration (per SCHEMA.md), `Activity` model, and `app/Actions/RecordActivity.php`; membership mutations record `member_added`/`member_removed`/`role_changed`.
-- **Routes**: `routes/admin.php` (`auth` + `can:admin`); team switch + member routes in the `web.php` auth group.
-- **Shared props**: `HandleInertiaRequests` adds `auth.isAdmin`, `currentTeam` (id/name/current user's role), `teams`; update TS types.
-- **Frontend**: `team-switcher.tsx`; sidebar shows Admin nav for super-admins; pages `admin/users/index.tsx`, `admin/teams/index.tsx`, `teams/show.tsx` (member management with role selector).
-- **Seeder**: super-admin `admin@example.com`/`password` with team "Workspace", plus one editor and one viewer.
+### 6.5 Account administration
 
-### Phase B — Core domain: folders, documents, upload/download, metadata, browser UI
+- **No self-registration.** Accounts are created by an admin.
+- **Two password recovery paths**, so no single dependency can lock anyone out:
+  - **Email reset** via outbound SMTP (§3.6) — convenient, but depends on the office's internet.
+  - **Admin-initiated reset** — the admin sets a temporary password that the user must change at next login. Requires no internet and matches how this office already operates: everyone is in the same building.
+- **Deactivation revokes access immediately.** A deactivated user's session is invalidated on their next request, so a departing staff member cannot continue browsing the archive. The account is deactivated, **not deleted**, so their upload and edit history remains attributable.
 
-- **Migrations**: `folders` and `files` per SCHEMA.md (files includes `reference_number` and the metadata columns). **Config**: `config/files.php` per §3.5.
-- **Models**: `Folder` (SoftDeletes; `parent()`, `children()`, `files()`, `ancestors()`, `isDescendantOf()`); `File` (SoftDeletes; `document_date` cast; disk cleanup on `forceDeleting`). Factories for both.
-- **Policies**: `FolderPolicy`/`FilePolicy` per §3.3. **Middleware**: `EnsureHasActiveTeam` (fallback to first team; zero teams → notice page), aliased `active.team`.
-- **Controllers** (Form Requests in `app/Http/Requests/Files/`): `FileBrowserController@index(?Folder)` (browse + search `?q=` across name/reference_number/description/source + `?type=` filter + flat folder list for the move dialog + distinct `source` values for autocomplete); `FolderController` (store/update/destroy — duplicate-sibling and move-into-self/descendant rejected; recursive soft delete in one transaction with shared `deleted_at`); `FileController` (multi-upload with batch metadata, `update` = rename + metadata, `destroy`); `FileDownloadController` (authorize then `Storage::download`); collision helper `app/Actions/Files/GenerateUniqueFileName.php`. All file/folder mutations record activities (`uploaded`, `renamed`, `moved`, `metadata_updated`, `trashed`) via `RecordActivity`.
-- **Routes**: `routes/files.php` (`auth` + `active.team`).
-- **Frontend**: files page, upload dialog, details dialog, new-folder/rename/move/delete dialogs per §3.6; sidebar gains Files + Trash items.
+### 6.6 Access and search logging
 
-### Phase C — Trash
+- **Access log** — recorded when the PDF is served: who, which document, when, action (view / download / print). See §3.5 and §7.4 for what this log can and cannot prove.
+- **Search log** — recorded per search: query, result count, whether a result was opened. Feeds §5.3.
 
-- **`TrashController`** + routes (bindings `->withTrashed()`): trash index (top-level items only, each with who/when trashed from the activity log), restore file/folder (editor+; subtree via shared `deleted_at`; orphans → root; collision suffix), delete forever file/folder and empty trash (team admin only; forceDelete + disk cleanup). Records `restored`, `force_deleted`, `trash_emptied` activities.
-- **Frontend**: `pages/trash/index.tsx` with role-gated actions, confirm dialogs, and a "trashed by" column.
+### 6.7 Correcting mistakes
 
-### Phase D — Polish and hardening
+Governing principle: **corrections stay fast and unblocked; destructive acts require authority; nothing inside 90 days is irreversible.**
 
-1. Dashboard: recent documents + storage-used stats for the active team (also the early-warning for the no-quota risk).
-2. Activity page: team-scoped, paginated activity list (team admins + super-admin) per §3.6.
-3. Toasts on all mutations, loading states, file-size formatter (`resources/js/lib/format.ts`), mime-type icons.
-4. Full quality gate: `composer run ci:check`.
+**Metadata changes — free, but never silent.**
+Editors may correct metadata without approval. Requiring approval for every typo, date, or misspelled subject would queue routine work behind the office head and stall encoding throughput.
 
----
+Instead, **every change records the old value, the new value, who changed it, and when.**
 
-## 5. Testing
+*Why this matters more than it appears:* the metadata card is the only way into a document (§3.2), and v1 has no OCR to recover it by content. So changing a business name to a wrong value makes a document **exactly as unfindable as deleting it** — and would do so without triggering any approval. Silent re-tagging is deletion by another name. Change history does not prevent it; it makes it **visible, attributable, and reversible**, which is the achievable goal.
 
-### 5.1 Automated (Pest, per phase; `RefreshDatabase`; `Storage::fake('local')` for files)
+**Revert.**
+- The **original editor** may revert their own change. Their justification is their own — consistent with §3.5, where the person who made a change owns it.
+- **Admin fallback:** an admin may revert any change, recorded as an admin action rather than as the original editor's. This is required because deactivated accounts persist (§6.5) — without a fallback, a departed clerk's mis-tagged records would be **permanently unrevertable**, leaving only manual retyping, which appears in history as a fresh edit rather than an undo.
 
-- **Phase A**: team switch (member ok, non-member 403); member management (team admin ok, editor/viewer 403, role change, last-admin guard on demote and remove); admin user CRUD (non-admin 403, deactivated user logged out, can't deactivate self); admin team CRUD; register route 404; login works unverified; membership mutations write activity rows.
-- **Phase B**: folder CRUD incl. cycle and duplicate-name rejection; upload (path under `teams/{id}/`, DB row, oversize rejected, multi-file, `report (1).pdf` suffixing, batch metadata applied to all files, invalid type rejected); metadata update persists; download (member ok + filename header, cross-team 403, guest redirect) — **download writes no activity row**; search matches reference number, description, and source, type filter works; viewer 403 on every write endpoint, viewer can download; browse scoped to active team; each mutation writes the expected activity row.
-- **Phase C**: cascade delete; top-level-only listing; subtree restore; orphan restore to root; restore collision suffix; permanent delete removes row **and** `Storage::assertMissing`; editor 403 on delete-forever and empty-trash; empty trash; trashed file download 404s; cross-team 403; search excludes trashed and other teams; trash/restore/force-delete write activity rows and `details` JSON preserves the name after force-delete.
-- **Phase D**: activity page — team admin ok, editor/viewer 403, scoped to active team.
-- **Authorization is the highest-risk area**: every controller test file includes at least one cross-team 403, one viewer-403 (write endpoints), and one guest-redirect case.
+**Replacing a scan (wrong PDF uploaded).**
+The superseded file is **retained as a previous version, never overwritten.** Without this, replacing a file would be a destructive act that bypasses the deletion approval gate below — the same hole one layer down — and revert would have nothing to revert to.
 
-### 5.2 Quality gate (after every phase)
+**Deletion — requires approval.**
+1. The person who made the mistake files a **deletion request with a written justification.** Requiring the reason to be stated is what prevents a mistake from being quietly removed.
+2. The request triggers **approval by the office head** in the system. Both the request and the decision are logged.
+3. **On filing, the system automatically hides the document from search; on rejection, it restores it.** Hiding is a *state produced by the workflow*, not an action any user can invoke — so no one can hide a document unilaterally or silently, while a wrong document is not left exposed to every staff account (§7.5) for however many days the office head is away.
+4. An approved deletion is a **soft delete**, not immediate removal.
 
-`php artisan test --compact` green · `composer run types:check` · `npm run build` clean · `vendor/bin/pint --dirty --format agent`.
+**90-day retention window.**
 
-### 5.3 Acceptance: manual smoke + retrieval drill
+| Item | Retention |
+|---|---|
+| Current file version | Never purged |
+| Superseded file versions | 90 days, then purged automatically |
+| Soft-deleted documents | 90 days, then purged automatically |
 
-With `composer run dev` and the seeded accounts:
+Purging is **automatic and scheduled — no user holds a permanent-delete button.** This is deliberate: a manual purge would become the quiet bypass that file replacement almost became, and it keeps an approval given carelessly on a busy day recoverable.
 
-- **A**: log in; `/register` is 404; create a user in admin; switch teams; team admin changes a member's role; last admin cannot be removed.
-- **B**: upload a batch with shared metadata (reference number, type "Letter", a source office) → progress bar → both files carry the metadata; search by reference number and by a word from the description finds it; type filter works; source field autocompletes; Details shows physical location; as viewer → no write controls, download + search still work; a user in another department sees nothing.
-- **C**: delete → appears in trash showing who trashed it → restore → (as team admin) delete forever → file gone from `storage/app/private/teams/...`; editor sees no Delete forever / Empty trash; the Activity page lists every step just performed.
-- **Retrieval drill (maps to success criterion 1)**: encode 10 sample documents from the real archive, then have someone else find 3 of them by description/source/type only — each in under a minute.
+90 days is chosen because mistake recovery is a **short-horizon need** — a wrong scan surfaces within hours or days, not years — while unbounded retention grows the disk on a single local server and makes the already-unowned backup task (§7.7) heavier every month. After the window, the paper original remains the fallback (§7.10).
 
 ---
 
-## 6. Deployment
+## 7. Limitations (accepted, and to be stated to the office before launch)
 
-1. Install on the on-premises server: `composer run setup` (deps, `.env`, key, migrations, build) with MySQL configured; `npm run build` for production assets; queue worker + scheduler as services.
-2. Seed the super-admin, then **change the default password immediately**.
-3. Super-admin creates the real departments and user accounts, assigning team admins.
-4. Confirm the backup/snapshot routine covers both the MySQL database **and** `storage/app/private` before any real document is encoded.
-5. Go-live check: one real user per department logs in, uploads a test document, finds it via search, and downloads it.
+**7.1 Search quality equals data-entry quality.** The system searches typed metadata, not document contents. A document tagged wrongly is unfindable, and v1 has no OCR safety net to catch it.
+
+**7.2 Duplicate business entries will occur.** Typeahead suggestion reduces them; it does not prevent them. When a business is entered twice under slightly different names, its documents split across both and a search finds only part.
+
+**7.3 Data quality depends on user training, and training decays.** Trained staff leave; temporary staff are hired to encode backlog without the same briefing; under time pressure, people click past suggestions. **Nothing in the software resists this** — it is a policy responsibility the office owns.
+
+**7.4 The access log is a deterrent and a record, not a protection.** Any user who can view a document can copy it by other means — browser save, screenshot, or photographing the screen. Printing without downloading does not change this, because the file must reach the user's machine to be displayed at all. Confidentiality ultimately depends on office policy, not on the software.
+
+**7.5 There are no visibility restrictions between staff.** Every account can view every document. This is intentional and matches current physical practice, but it means the system converts a physically-guarded archive into a queryable one, and that change is not reversible once made.
+
+**7.6 Printouts are for internal reference only.** They are not certified true copies and carry no seal, signature, or issuing mark. Official copies must still be produced from the paper original.
+
+**7.7 The local server is a single point of failure, and backups are a manual human habit.** Local hosting brings no cloud redundancy. A drive failure, theft, ransomware, or flood destroys the index and every hour of encoding work — while the paper originals survive, returning the office to the storage room. **Backups must be taken off the machine on a schedule and stored elsewhere, by a named person.**
+
+**7.8 Administration currently depends on one unpaid non-employee.** See §7.13.
+
+**7.9 Location data covers only digitized documents.** Roughly 90% of the backlog has no QR code, so transfers of those documents to central storage remain untracked. This gap shrinks only as the backlog is encoded.
+
+**7.10 Paper originals are never destroyed.** The scan is a retrieval index, not a legal replacement. The storage room and central storage building remain the source of truth — which is also the safety net behind every limitation above.
+
+**7.11 "Not in the known list" is permanently weaker than "does not exist."** The business list is seeded from transaction logs and staff recollection, both of which favour active businesses over dormant ones. The system answers strongly for active businesses and weakly for old or closed ones — and by design it never converts that weakness into a denial (§6.1).
+
+**7.12 The upload-before-print rule can still be bypassed.** The office has a copier. A rushed clerk can photocopy the original and skip the system entirely. The workflow in §6.3 makes uploading the path of least resistance; it does not make bypassing impossible.
+
+**7.13 The system depends on a single unpaid, non-employee administrator with no succession plan.** During the interim period the developer administers the system — creating accounts, resetting passwords, deactivating leavers — without pay, without an employment relationship, and without formal IT authority. If that person becomes unavailable before the organization absorbs the system, **no one can perform those functions.**
+
+This arrangement is temporary by intent and is **built with the consent of the office head**, with transparency about what the administrator can technically access. But consent is not a control: the interim administrator necessarily holds access to data that only an employee of the organization should hold. **That is the primary reason the role must transfer**, independent of whether the system works well.
+
+**Handover condition (to be agreed in writing before go-live):** the developer administers the system for **six (6) months from go-live**. Before that period ends, the organization must name an internal administrator and the role transfers to them. Identifying and qualifying that person is the organization's HR responsibility, not a system feature.
+
+> **Note for the organization:** an office that has never staffed IT for this unit (§1.1) is unlikely to create the role spontaneously. The most probable outcome of a *successful* launch is an expectation that the unpaid arrangement continues indefinitely. The handover condition exists to prevent that by default.
 
 ---
 
-## 7. Operations (after delivery)
+## 8. Open risks (challenged in review, not resolved)
 
-- **Backlog encoding**: departments scan and encode the ~1,500-document archive (out of project scope, §1.4). The batch-metadata upload flow exists specifically to make this fast; track progress informally via the dashboard counts.
-- **Monitoring**: watch the dashboard storage-used stat — it is the early warning for the accepted no-quota risk.
-- **Backups**: periodically test a restore (database + files together), not just the snapshot job.
-- **Review against success criteria** (§1.3) once encoding is underway; the kill criteria (§1.7) name the signals that should trigger a v2 rethink (OCR/full-text being the most likely).
+**8.1 No one is named as owner of backups.** This is the highest unresolved risk in the project. Local-only hosting, no IT support anywhere in the organization, and no authority to compel a policy — combined with a system the office will depend on within a year. *Must be assigned before real data goes in.*
+
+**8.2 No one is named as owner of duplicate cleanup.** Suggest-only dedupe was chosen on the assumption that duplicates would be merged periodically. No role has been assigned to do it.
+
+**8.3 A stale location gives a confident wrong answer, and nothing verifies it.** This is a worse failure mode than a missing record: a wrong tag returns *nothing* and the clerk knows to keep looking, but a stale location sends them to the wrong building. QR-driven updates mitigate this for digitized documents only (§7.9), and there is **no automated way to check location accuracy** short of physically verifying files.
+
+**8.4 The "most in-demand 10%" is a judgment call with no data behind it.** The office keeps no retrieval log, so demand is estimated from experience, not measured. If the pilot set is chosen wrongly, staff search, fail to find, and conclude the system is useless — a failure with nothing to do with the software's quality.
+
+**8.5 Adoption is unproven.** The office has never run any system. Nothing about this project has been tested against how staff actually behave under workload.
+
+**8.6 Approval fatigue will hollow out the deletion gate.** The office head approves deletion requests while also running the office. The realistic failure is not refusal but **routine approval without reading the justification** — at which point the gate is theatre and the written reason is a formality. The 90-day soft delete (§6.7) limits the damage of a careless approval but does not address the cause. Nothing currently tracks approval rates or flags an unusual volume of requests from one editor.
+
+**8.7 Disk capacity is unmonitored.** Version history and soft-deleted documents bound the growth rate but the archive only grows. On a single local server, a full disk means **uploads fail during the retrieval workflow, with a client waiting.** No one is assigned to watch free space, and no alert exists.
+
+**8.8 The six-month handover has no named successor and no enforcement.** §7.13 now sets the duration, but nothing obliges the organization to name an internal administrator by month six, and the developer has no leverage once the system is working and depended upon. The realistic failure is silent drift past the deadline rather than a refusal.
+
+---
+
+## 9. Kill criteria — when to stop and rethink
+
+- **Hit rate stays below 60% after the pilot period** → the encoding strategy is wrong, not the software. Revisit what gets encoded before building anything further.
+- **Metadata search fails during the pilot** (staff cannot find documents they know exist) → OCR becomes v1's centerpiece. Do not bolt it on mid-build.
+- **Staff stop searching the system first and go straight to the storage room** → adoption is failing; stop adding features and find out why.
+- **Duplicate business entries accumulate unmerged during the pilot** → suggest-only was the wrong call; enforcement or a mandatory merge process must be designed before scaling up.
+- **The office asks for certified or official copies to issue to clients** → stop; copy certification (watermark, reference number, issuing officer, date) is a requirement to design deliberately, not a feature to add after launch.
+- **No one accepts ownership of backups** → do not allow the system to hold sole-copy data; it stays a convenience index over surviving paper, and that must be said explicitly to the office.
+- **Location tracking proves unreliable in the pilot** → remove the feature rather than let the system state a location it cannot stand behind.
+- **The office requires per-user or per-department document restrictions** → stop and design authorization first; §7.5 flat access is a structural assumption, not a setting.
+- **Deletion requests become routine volume rather than rare exceptions** → the problem is upstream in encoding quality or training (§7.3), not in the deletion workflow. Fix the cause; do not streamline the gate.
+- **The organization declines to name an internal administrator at the end of the six-month interim** → escalate before extending; §7.13 exists precisely so this is a decision, not a drift.
+
+---
+
+## 10. Not yet defined
+
+The following must be worked through before implementation begins:
+
+- The exact metadata field list and which fields are mandatory
+- Document type list and business/location data structure
+- Data model and schema
+- Architecture and technical design
+- QR code format, generation, and scanning mechanism
+- Test strategy, deployment procedure, and operations
+- Who the internal administrator will be at the end of the six-month interim (§8.8)
+- Whether anyone monitors disk capacity, and how they are alerted (§8.7)

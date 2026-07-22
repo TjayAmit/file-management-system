@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A file management system built on the Laravel React starter kit: Laravel 13 + Inertia v3 + React 19 + Tailwind CSS v4, with MySQL as the database. The file-management domain code has not been built yet — the current codebase is the starter kit foundation (auth, settings, dashboard shell).
 
+**Read [PLAN.md](PLAN.md) before working on domain features.** It defines the problem, proposed solution, scope, and limitations. Requirements, data model, and architecture are not yet defined (PLAN.md §8) — do not invent them; ask.
+
 ## Commands
 
 ```bash
