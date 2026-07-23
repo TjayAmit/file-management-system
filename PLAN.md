@@ -474,10 +474,9 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 ## 10. Not yet defined
 
-The following must be worked through before implementation begins:
+The **data model is defined** in [SCHEMA.md](SCHEMA.md) (business → branch → document, versions, change history, deletion requests, transfers, and the three logs). The following remain:
 
 - The final date fallback when a document has neither approval nor request date (§8.9)
-- Data model and schema (the §6.8 structure expressed as tables)
 - Architecture and technical design (web system + Android app + shared API)
 - **QR code format** — the encoding of the opaque reference (§6.9); the *scanning* is settled (Android app camera)
 - **API request/response shapes** — the endpoints, versioning, and auth model are settled (§6.9); the payload schemas are not
