@@ -352,13 +352,15 @@ Business (name)
 
 A document cannot be saved without all four. Title/subject is optional free text; scan date is automatic. Making exactly the four search-narrowing fields mandatory is the deliberate balance between encoding speed (§4.2) and hit rate — every mandatory field slows the clerk, but a blank one of *these four* makes the document unfindable.
 
+**The single sort key — "the main date":** documents sort by one effective date — **approval date, falling back to request date** when no approval date exists. The two are treated as one logical date, so a mixed list is coherent. A document with neither date sorts last and is flagged for completion (§8.9). Scan date is **never** a sort key.
+
 **Why the operative date must be the document's own date, not the scan date:** if encoders mix the document date with the scan date, a business's documents sort in a jumbled order and "scroll to the right date" (§3.2 step 4) stops working; and §4.3/§4.4 recency priority collapses because every backlog item would read as current. The date hierarchy is fixed: **approval date first, request date as fallback, scan date never.**
 
 ### 6.9 Companion mobile app (v1)
 
 The app exists for **one job: closing the location-tracking loop (§3.4).** The web system generates and prints QR codes; the app scans them and updates each document's physical location. It is **not** a second way to browse or read the archive — viewing documents stays on the web system.
 
-**Platform:** Android only (v1). iOS deferred — see §10.
+**Platform:** built in **Flutter**, targeting **Android** for v1 (Flutter leaves an iOS build possible later without a rewrite). See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 **The app's features are exactly these, and no more:**
 
@@ -451,7 +453,7 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 **8.8 The six-month handover has no named successor and no enforcement.** §7.13 now sets the duration, but nothing obliges the organization to name an internal administrator by month six, and the developer has no leverage once the system is working and depended upon. The realistic failure is silent drift past the deadline rather than a refusal.
 
-**8.9 A document with neither an approval date nor a request date is unhandled.** The date hierarchy is settled (§6.8): **approval date is primary; request date is the fallback.** This resolves the common case. The residual risk is the document that carries *neither* — an unapproved, undated, or informally filed paper. For those the sort key is undefined and encoders will each guess differently. Two things must be fixed before encoding starts: (a) the final fallback when both dates are absent, and (b) whether mixing approval-dated and request-dated documents in the *same* sorted list is acceptable, since a business's pile may then be ordered on two different date meanings.
+**8.9 Documents with neither date sort last — a small accepted residual.** *Resolved:* there is a single effective sort key — **"the main date" = approval date, falling back to request date.** Approval-dated and request-dated documents are treated as one logical date, so **mixing them in one sorted list is accepted** (part (b) closed). A document carrying *neither* date has no sort position; it **sorts last and should be flagged for an editor to complete.** *Residual:* nothing forces that flag to be resolved, so a truly dateless document can sit at the bottom of a business's list indefinitely — acceptable because it is rare and the list is short (§3.2), but not prevented.
 
 **8.10 The static-IP setup is resolved for launch; only its long-term maintenance is a residual.** *Resolved:* the server is deployed on the office router with a **static local IP**, set by the developer at deployment, and the app is configured with that fixed address (§6.9). This is not a standards-compliant network design, and it does not need to be — it is a pragmatic fit for an office with no IT or infrastructure (§1.1), accepted deliberately. *Residual:* if the router is ever reset, replaced, or reconfigured, the static IP is lost and every phone breaks until someone re-applies it — and no internal person is assigned that knowledge (§7.13). Low probability, but no owner. The developer should record the network settings somewhere the office can hand to a future admin.
 
@@ -474,10 +476,7 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 ## 10. Not yet defined
 
-The **data model is defined** in [SCHEMA.md](SCHEMA.md) (business → branch → document, versions, change history, deletion requests, transfers, and the three logs). The following remain:
-
-- The final date fallback when a document has neither approval nor request date (§8.9)
-- Architecture and technical design (web system + Android app + shared API)
+The **data model is defined** in [SCHEMA.md](SCHEMA.md) and the **architecture and backend conventions** in [ARCHITECTURE.md](ARCHITECTURE.md). The following remain:
 - **QR code format** — the encoding of the opaque reference (§6.9); the *scanning* is settled (Android app camera)
 - **API request/response shapes** — the endpoints, versioning, and auth model are settled (§6.9); the payload schemas are not
 - Android app: target the **latest Android version**; how it is distributed and updated (no app store assumed), and how staff phones are provisioned onto the office wifi
