@@ -429,7 +429,7 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 > **Note for the organization:** an office that has never staffed IT for this unit (§1.1) is unlikely to create the role spontaneously. The most probable outcome of a *successful* launch is an expectation that the unpaid arrangement continues indefinitely. The handover condition exists to prevent that by default.
 
-**7.14 Network-gated access is only as strong as the office wifi.** The gate (§6.10) stops remote access, but "on the office network" in practice means "knows the wifi password and is within radio range" — which can include the parking lot, adjacent units, and every guest ever given the password. On shared, static-password office wifi the boundary is porous, and the developer (a non-employee) already has access to it. The gate hardens the *outer* wall against remote attackers — a threat local-only hosting (§3.6) already mostly closes — while the *inside* stays open by design: any authorized person on the network can still copy a document (§7.4). It is defense-in-depth, not a guarantee.
+**7.14 Network-gated access is only as strong as the office wifi, and is backed by policy.** The gate (§6.10) stops remote access, but "on the office network" in practice means "knows the wifi password and is within radio range" — which can include the parking lot or adjacent units. This technical boundary is porous on shared-password wifi and cannot be fully closed without infrastructure the office does not have. It is therefore backed by an **office policy: staff work with documents only inside the office.** The policy, not the wifi radius, is the real boundary; the network gate is defense-in-depth beneath it. As with every policy control in this plan, it depends on the office enforcing it (§7.3), and the inside stays open by design — an authorized person can still copy a document (§7.4).
 
 ---
 
@@ -453,7 +453,7 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 **8.9 A document with neither an approval date nor a request date is unhandled.** The date hierarchy is settled (§6.8): **approval date is primary; request date is the fallback.** This resolves the common case. The residual risk is the document that carries *neither* — an unapproved, undated, or informally filed paper. For those the sort key is undefined and encoders will each guess differently. Two things must be fixed before encoding starts: (a) the final fallback when both dates are absent, and (b) whether mixing approval-dated and request-dated documents in the *same* sorted list is acceptable, since a business's pile may then be ordered on two different date meanings.
 
-**8.10 The office server needs a static local IP, and nobody owns the network config.** The Android app reaches the server at a fixed local address (§6.9). If the server gets its IP from DHCP, a reassignment silently breaks every phone until someone updates them. Setting a static IP (or a LAN hostname/mDNS) is a one-time network task — but §1.1 says there is no IT, and §7.13 says the admin is a non-employee with no network authority. Who configures and maintains this is unassigned. The same gap affects §6.10's network gate, which depends on a stable, known LAN.
+**8.10 The static-IP setup is resolved for launch; only its long-term maintenance is a residual.** *Resolved:* the server is deployed on the office router with a **static local IP**, set by the developer at deployment, and the app is configured with that fixed address (§6.9). This is not a standards-compliant network design, and it does not need to be — it is a pragmatic fit for an office with no IT or infrastructure (§1.1), accepted deliberately. *Residual:* if the router is ever reset, replaced, or reconfigured, the static IP is lost and every phone breaks until someone re-applies it — and no internal person is assigned that knowledge (§7.13). Low probability, but no owner. The developer should record the network settings somewhere the office can hand to a future admin.
 
 ---
 
@@ -481,7 +481,7 @@ The following must be worked through before implementation begins:
 - Architecture and technical design (web system + Android app + shared API)
 - **QR code format** — the encoding of the opaque reference (§6.9); the *scanning* is settled (Android app camera)
 - **API request/response shapes** — the endpoints, versioning, and auth model are settled (§6.9); the payload schemas are not
-- Android app: minimum OS version, how it is distributed and updated (no app store assumed), and how staff phones are provisioned onto the office wifi
+- Android app: target the **latest Android version**; how it is distributed and updated (no app store assumed), and how staff phones are provisioned onto the office wifi
 - Who owns the office server's static-IP / LAN configuration (§8.10)
 - Test strategy, deployment procedure, and operations
 - Who the internal administrator will be at the end of the six-month interim (§8.8)
