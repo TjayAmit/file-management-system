@@ -55,26 +55,31 @@ The primary engine for filling the archive is the **retrieval workflow itself** 
 
 ### 3.2 How documents are found
 
-Search queries **the metadata only** — the system never reads inside the PDF. Documents are described by:
+Search queries **the metadata only** — the system never reads inside the PDF. The full field list and the filing structure are specified in §6.8; the retrieval model is:
 
-- **Business name** and **location**
-- Document **date**
-- Document **type**
-- Title / subject, person or entity concerned
+A staff member searches for a document for exactly one reason — **a business owner has made a request about it.** So the search follows the order already in the clerk's head:
 
-Search matches these fields, returns the matching records, and opening a result serves the PDF.
+1. **Business name** — returns everything for that business. A business may have **multiple branches**, so this may span several locations.
+2. **Branch / location** — narrows to the specific branch (one business can be many buildings; the document concerns one address).
+3. **Request type** — narrows to the kind of request (e.g. setback inspection request). Because any one request type recurs only ~5–7 times a year for a branch, this leaves a short list.
+4. **Date** — the clerk scrolls the short list to the right one; precise date search is unnecessary at this volume. The operative date is the **approval date** (§6.8), falling back to the request date only when no approval date is on the document.
+
+**Two top-level entry points, not one.** Search normally starts from the business name, but it can also start from **location/address alone** — when a matter arrives with the address known but the owner unknown ("the building on Rizal St"). Location is therefore a searchable entry in its own right, not only a filter beneath a business.
 
 > **Consequence, accepted deliberately:** the metadata card is the *only* way in. A document with no card, or a wrong card, is invisible even though the file exists on disk.
 
-### 3.3 Keeping business names consistent
+### 3.3 Consistent data entry — one pattern for every naming field
 
-Business name and location are the primary way documents are found, so they cannot be free-typed inconsistently. `ABC Corp` and `ABC Corporation` as two separate entries would split a business's history in half and make searches return only part of it.
+Business, branch/location, and request type are all the fields that *narrow* a search. If any of them is free-typed inconsistently, its documents fragment across variant spellings (`ABC Corp` vs `ABC Corporation`; `Rizal St` vs `Rizal Street`; `Setback Inspection Request` vs `Set-back inspection`) and a search returns only part of what exists — silently, because the search still returns *something*.
 
-**v1 approach — controlled vocabulary with typeahead suggestion:** when a user types a business name, the system shows existing matches so they select the established entry instead of retyping it.
+**One pattern applies to all three** (detailed in §6.8):
 
-**This is suggest-only, not enforced.** A user may still create a new entry despite a suggested match. Duplicates become *rare*, not impossible — chosen knowingly, to avoid blocking legitimately similar new businesses and to keep backlog encoding fast.
+- **Data-driven, not a fixed static list** — values are created from what staff actually encounter, so the system is never blocked by an unforeseen business, branch, or request type.
+- **Controlled by typeahead suggestion** — when a user types, the system shows existing matches so they select the established value instead of creating a variant.
+- **Suggest-only, not enforced** — a user may still create a new value despite a suggested match. Duplicates become *rare*, not impossible (§7.2) — chosen knowingly, to avoid blocking legitimately new entries and to keep encoding fast. Cleanup is owned per §8.2.
+- **Created by editors and admins**, not viewers.
 
-The same business list also powers the three-state search result in §6.1.
+The same business/branch list also powers the three-state search result in §6.1.
 
 ### 3.4 Tracking where the paper is
 
@@ -109,9 +114,10 @@ Scanning each document is manual effort, and that is accepted — it is effort t
 ### 4.1 In scope for v1
 
 - PDF upload with metadata entry
-- Metadata-based search with three-state results (§6.1)
-- Controlled business vocabulary with typeahead duplicate suggestion
-- Known-business list, seeded before launch and grown by use (§6.2)
+- Metadata-based search with three-state results (§6.1); business-first and address-first entry points (§3.2)
+- Business → branch → document filing structure (§6.8)
+- Controlled, data-driven vocabularies for business, branch, and request type with typeahead duplicate suggestion (§3.3)
+- Known-business/branch list, seeded before launch and grown by use (§6.2)
 - Physical location tracking (office / central storage building)
 - QR code generation and scan-to-update-status
 - Roles: viewer, editor, admin (§6.4)
@@ -217,6 +223,7 @@ This list is what makes §6.1 possible, and it doubles as the controlled vocabul
 - **Produced by:** staff with **editor/create** access — the same people accountable for other changes. Not viewers.
 - **When:** before go-live, alongside the 10% pilot encoding.
 - **Growth:** the list expands automatically as documents are encoded and requests are handled, so the dormant tail fills in over time rather than requiring anyone to recall it up front.
+- **Structure:** the list is business → branch (§6.8). A business known to staff but with no branch/location detail yet is still enough to answer the "known business, nothing encoded" state (§6.1); the branch is filled in when its first document is encoded.
 
 ### 6.3 Retrieval workflow — the archive fills itself
 
@@ -294,13 +301,45 @@ Purging is **automatic and scheduled — no user holds a permanent-delete button
 
 90 days is chosen because mistake recovery is a **short-horizon need** — a wrong scan surfaces within hours or days, not years — while unbounded retention grows the disk on a single local server and makes the already-unowned backup task (§7.7) heavier every month. After the window, the paper original remains the fallback (§7.10).
 
----
+### 6.8 Metadata fields and the filing structure
 
-## 7. Limitations (accepted, and to be stated to the office before launch)
+**The unit of filing is the branch, not the business.** A business is a *group*; a branch is a specific building at a fixed address. A document concerns one building, so **a document attaches to a branch (business + location), never to the business as a whole.** One business (e.g. a chain) can have many branches; each branch's documents are kept distinct so that searching the business name does not drown the clerk in every branch's paperwork.
+
+**Three-level structure:**
+
+```
+Business (name)
+  └── Branch (fixed address / location)   ← the filing unit
+        └── Document (one scanned PDF + its metadata)
+```
+
+**Controlled, data-driven vocabularies** (the §3.3 pattern — typeahead-suggest, suggest-only, editors+admins create):
+
+| Entity | What it is | Notes |
+|---|---|---|
+| **Business** | The business name | Grouping level; may have many branches |
+| **Branch / location** | A fixed physical address under a business | The filing unit; also a **top-level search entry** (address-first search, §3.2) |
+| **Request type** | The kind of request (e.g. setback inspection request) | The second-stage narrowing filter; must be controlled, not free text, or the filter fragments |
+
+**Per-document fields:**
+
+| Field | Meaning | Searchable? | Entered how |
+|---|---|---|---|
+| **Approval date** | The date the request was **approved by the organization's approving officer.** **The primary date** — the basis of all process, of sort order, and of the §4.3/§4.4 recency logic. | Yes (primary sort/scroll) | Read from the document (the approval endorsement). |
+| **Request date** *(fallback)* | The date the owner submitted the request. Used **only when the document carries no approval date** (§8.9). | Yes | Read from the document |
+| **Request type** | See above | Yes (filter) | Controlled vocabulary |
+| Branch | The branch this document belongs to | Via business/location | Selected from the business's branch list |
+| Title / subject, person or entity | Free-text description of the matter | Yes (text match) | Typed |
+| **Scan date** | When the document was encoded | **No** | **Automatic, never typed, never sorted on** — audit only. Kept separate from the approval/request dates so backlog documents scanned in 2026 do not all collapse to a 2026 date and break recency logic. |
+| Physical location / status | Office vs central storage building | — | QR-driven (§3.4) |
+
+**Field priority (most important first, per the plan):** business + location, request type, date. These are what every search narrows on; everything else is supporting detail.
+
+**Why the operative date must be the document's own date, not the scan date:** if encoders mix the document date with the scan date, a business's documents sort in a jumbled order and "scroll to the right date" (§3.2 step 4) stops working; and §4.3/§4.4 recency priority collapses because every backlog item would read as current. The date hierarchy is fixed: **approval date first, request date as fallback, scan date never.** (accepted, and to be stated to the office before launch)
 
 **7.1 Search quality equals data-entry quality.** The system searches typed metadata, not document contents. A document tagged wrongly is unfindable, and v1 has no OCR safety net to catch it.
 
-**7.2 Duplicate business entries will occur.** Typeahead suggestion reduces them; it does not prevent them. When a business is entered twice under slightly different names, its documents split across both and a search finds only part.
+**7.2 Duplicate entries will occur in every controlled field — business, branch, and request type.** Typeahead suggestion reduces them; it does not prevent them (suggest-only, §3.3). When any of these is entered twice under slightly different values, its documents split across both and a search finds only part. The branch and request-type cases are more dangerous than the business case: the clerk sees the correct business name and trusts that the branch and type lists beneath it are complete, so the split goes unnoticed.
 
 **7.3 Data quality depends on user training, and training decays.** Trained staff leave; temporary staff are hired to encode backlog without the same briefing; under time pressure, people click past suggestions. **Nothing in the software resists this** — it is a policy responsibility the office owns.
 
@@ -350,6 +389,8 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 **8.8 The six-month handover has no named successor and no enforcement.** §7.13 now sets the duration, but nothing obliges the organization to name an internal administrator by month six, and the developer has no leverage once the system is working and depended upon. The realistic failure is silent drift past the deadline rather than a refusal.
 
+**8.9 A document with neither an approval date nor a request date is unhandled.** The date hierarchy is settled (§6.8): **approval date is primary; request date is the fallback.** This resolves the common case. The residual risk is the document that carries *neither* — an unapproved, undated, or informally filed paper. For those the sort key is undefined and encoders will each guess differently. Two things must be fixed before encoding starts: (a) the final fallback when both dates are absent, and (b) whether mixing approval-dated and request-dated documents in the *same* sorted list is acceptable, since a business's pile may then be ordered on two different date meanings.
+
 ---
 
 ## 9. Kill criteria — when to stop and rethink
@@ -371,9 +412,9 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 The following must be worked through before implementation begins:
 
-- The exact metadata field list and which fields are mandatory
-- Document type list and business/location data structure
-- Data model and schema
+- Which metadata fields are **mandatory** vs optional at upload (fields themselves are defined in §6.8)
+- The encoding rule for documents with no request date on them (§8.9)
+- Data model and schema (the §6.8 structure expressed as tables)
 - Architecture and technical design
 - QR code format, generation, and scanning mechanism
 - Test strategy, deployment procedure, and operations
