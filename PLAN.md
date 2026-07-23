@@ -87,11 +87,13 @@ Each document record carries the **current physical location** of its paper orig
 
 To keep this accurate, updates are **driven by the paper itself**, not by memory:
 
-- A **QR code is generated and attached to the physical document.**
+- The **web system generates a QR code** for each document (v1), printed and attached to the physical paper. The QR encodes an **opaque document reference** (§6.9) — meaningless without the authenticated app.
 - Documents are **consolidated into a batch first**, then transferred.
-- An editor **scans each document's QR code** to mark its new status/location.
+- An editor **scans each document's QR code with the companion Android app** (§6.9) to mark its new status/location. The app updates the record through the system's API over the office network.
 
 Scanning each document is manual effort, and that is accepted — it is effort that produces truth.
+
+Both halves ship in **v1**: QR generation in the web system, and QR scanning in the companion app. An editor can also set a document's location **manually in the web UI** as a fallback when no phone is at hand. The location-tracking goal (§2) therefore functions at launch, not later.
 
 ### 3.5 Access and accountability
 
@@ -118,8 +120,10 @@ Scanning each document is manual effort, and that is accepted — it is effort t
 - Business → branch → document filing structure (§6.8)
 - Controlled, data-driven vocabularies for business, branch, and request type with typeahead duplicate suggestion (§3.3)
 - Known-business/branch list, seeded before launch and grown by use (§6.2)
-- Physical location tracking (office / central storage building)
-- QR code generation and scan-to-update-status
+- Physical location tracking (office / central storage building), updatable in the web UI and via the app
+- QR code generation in the web system (§3.4)
+- **Companion Android app** (§6.9): login, QR scan, resolve record, update location, batch transfer — over the office LAN via a versioned API
+- Network-gated access for both web and app (§6.10)
 - Roles: viewer, editor, admin (§6.4)
 - Account administration, password recovery, and session revocation (§6.5)
 - Access logging on document serving (view / download / print)
@@ -348,7 +352,50 @@ Business (name)
 
 A document cannot be saved without all four. Title/subject is optional free text; scan date is automatic. Making exactly the four search-narrowing fields mandatory is the deliberate balance between encoding speed (§4.2) and hit rate — every mandatory field slows the clerk, but a blank one of *these four* makes the document unfindable.
 
-**Why the operative date must be the document's own date, not the scan date:** if encoders mix the document date with the scan date, a business's documents sort in a jumbled order and "scroll to the right date" (§3.2 step 4) stops working; and §4.3/§4.4 recency priority collapses because every backlog item would read as current. The date hierarchy is fixed: **approval date first, request date as fallback, scan date never.** (accepted, and to be stated to the office before launch)
+**Why the operative date must be the document's own date, not the scan date:** if encoders mix the document date with the scan date, a business's documents sort in a jumbled order and "scroll to the right date" (§3.2 step 4) stops working; and §4.3/§4.4 recency priority collapses because every backlog item would read as current. The date hierarchy is fixed: **approval date first, request date as fallback, scan date never.**
+
+### 6.9 Companion mobile app (v1)
+
+The app exists for **one job: closing the location-tracking loop (§3.4).** The web system generates and prints QR codes; the app scans them and updates each document's physical location. It is **not** a second way to browse or read the archive — viewing documents stays on the web system.
+
+**Platform:** Android only (v1). iOS deferred — see §10.
+
+**The app's features are exactly these, and no more:**
+
+1. **Login** — same user accounts and roles as the web system (§6.4). Only **editors and admins** can act; the app performs edits, which viewers cannot do (§3.5). Authentication is **network-gated** (§6.10): the app can only reach the server when the phone is on the office network, so login off-site simply fails.
+2. **Scan a QR code** — the phone camera reads the opaque reference on a document.
+3. **Resolve and show the record** — the app calls the API with the reference and displays the document's identity (business, branch, request type, date) and its **current** physical location, so the editor confirms they have the right paper before changing anything.
+4. **Update location / status** — set the document's physical location (in office / central storage building) and transfer status.
+5. **Batch transfer** — scan many documents in sequence and apply one new location to all of them in a single operation, matching the "consolidate first, then transfer" flow (§3.4).
+
+Every location change the app makes is written through the same activity log as the web system (§6.6) — who, which document, when.
+
+**QR content:** an **opaque document reference** — an unguessable token that means nothing on its own. A QR photographed by an ordinary phone camera reveals no address and no data; only the authenticated app, on the office network, can resolve it. This is deliberate for sensitive records: losing a printed document does not leak a working link.
+
+**System ↔ app API contract (v1).** The app talks to the same Laravel backend over the office LAN. This is the integration surface, fixed now so development does not stall later:
+
+- **Base URL:** `http://<office-server-static-ip>:<port>/api/v1/…` — the office server must have a **static local IP** (§8.10), or the app loses the server whenever DHCP reassigns it.
+- **Auth:** token-based. `POST /api/v1/auth/login` (credentials → bearer token); the token accompanies every later call; requests failing the network gate (§6.10) are rejected before auth.
+- **Resolve a scanned code:** `GET /api/v1/documents/{reference}` → the document's identity and current location.
+- **Update one document's location:** `PATCH /api/v1/documents/{reference}/location` (new location + status).
+- **Batch transfer:** `POST /api/v1/transfers` (list of references + target location) → applies one location to all, logged per document.
+
+The exact request/response shapes are an implementation detail (§10), but the endpoints, versioning (`/api/v1`), auth model, and static-base-URL requirement are settled here.
+
+### 6.10 Network-gated access
+
+**A user can only reach the system — web or app — while on the office network.** Login and every request require the client to be inside the office LAN; from outside, the system is simply unreachable.
+
+This is largely a *consequence* of local-only hosting (§3.6): a server that lives only on the office LAN and is not exposed to the internet cannot be reached from outside regardless. The explicit network check makes that boundary intentional rather than incidental, and it covers the app the same way it covers the browser.
+
+**What this control does and does not do** (see limitation §7.14):
+
+- **Does:** stop all remote access — no browsing the archive from home, mobile data, or another building. With local-only hosting, the archive has no internet-facing surface at all.
+- **Does not:** stop an authorized person already inside from copying a document (§7.4), and it is only as strong as the office wifi password (§7.14).
+
+---
+
+## 7. Limitations (accepted, and to be stated to the office before launch)
 
 **7.1 Search quality equals data-entry quality.** The system searches typed metadata, not document contents. A document tagged wrongly is unfindable, and v1 has no OCR safety net to catch it.
 
@@ -382,6 +429,8 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 > **Note for the organization:** an office that has never staffed IT for this unit (§1.1) is unlikely to create the role spontaneously. The most probable outcome of a *successful* launch is an expectation that the unpaid arrangement continues indefinitely. The handover condition exists to prevent that by default.
 
+**7.14 Network-gated access is only as strong as the office wifi.** The gate (§6.10) stops remote access, but "on the office network" in practice means "knows the wifi password and is within radio range" — which can include the parking lot, adjacent units, and every guest ever given the password. On shared, static-password office wifi the boundary is porous, and the developer (a non-employee) already has access to it. The gate hardens the *outer* wall against remote attackers — a threat local-only hosting (§3.6) already mostly closes — while the *inside* stays open by design: any authorized person on the network can still copy a document (§7.4). It is defense-in-depth, not a guarantee.
+
 ---
 
 ## 8. Open risks (challenged in review, not resolved)
@@ -403,6 +452,8 @@ This arrangement is temporary by intent and is **built with the consent of the o
 **8.8 The six-month handover has no named successor and no enforcement.** §7.13 now sets the duration, but nothing obliges the organization to name an internal administrator by month six, and the developer has no leverage once the system is working and depended upon. The realistic failure is silent drift past the deadline rather than a refusal.
 
 **8.9 A document with neither an approval date nor a request date is unhandled.** The date hierarchy is settled (§6.8): **approval date is primary; request date is the fallback.** This resolves the common case. The residual risk is the document that carries *neither* — an unapproved, undated, or informally filed paper. For those the sort key is undefined and encoders will each guess differently. Two things must be fixed before encoding starts: (a) the final fallback when both dates are absent, and (b) whether mixing approval-dated and request-dated documents in the *same* sorted list is acceptable, since a business's pile may then be ordered on two different date meanings.
+
+**8.10 The office server needs a static local IP, and nobody owns the network config.** The Android app reaches the server at a fixed local address (§6.9). If the server gets its IP from DHCP, a reassignment silently breaks every phone until someone updates them. Setting a static IP (or a LAN hostname/mDNS) is a one-time network task — but §1.1 says there is no IT, and §7.13 says the admin is a non-employee with no network authority. Who configures and maintains this is unassigned. The same gap affects §6.10's network gate, which depends on a stable, known LAN.
 
 ---
 
@@ -427,8 +478,11 @@ The following must be worked through before implementation begins:
 
 - The final date fallback when a document has neither approval nor request date (§8.9)
 - Data model and schema (the §6.8 structure expressed as tables)
-- Architecture and technical design
-- QR code format and generation, and the scanning mechanism — **target hardware is a phone or handheld scanner** (mechanism, encoding, and how a browser reads the scan are undefined)
+- Architecture and technical design (web system + Android app + shared API)
+- **QR code format** — the encoding of the opaque reference (§6.9); the *scanning* is settled (Android app camera)
+- **API request/response shapes** — the endpoints, versioning, and auth model are settled (§6.9); the payload schemas are not
+- Android app: minimum OS version, how it is distributed and updated (no app store assumed), and how staff phones are provisioned onto the office wifi
+- Who owns the office server's static-IP / LAN configuration (§8.10)
 - Test strategy, deployment procedure, and operations
 - Who the internal administrator will be at the end of the six-month interim (§8.8)
 - Whether anyone monitors disk capacity, and how they are alerted (§8.7)
