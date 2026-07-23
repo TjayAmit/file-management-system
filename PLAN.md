@@ -313,13 +313,15 @@ Business (name)
         └── Document (one scanned PDF + its metadata)
 ```
 
-**Controlled, data-driven vocabularies** (the §3.3 pattern — typeahead-suggest, suggest-only, editors+admins create):
+**Controlled, data-driven vocabularies** (the §3.3 pattern — typeahead-suggest, suggest-only, editors+admins create). All three narrow a search, so all three are protected the same way — a value is *selected from suggestions* wherever possible, and only *created* when genuinely new:
 
-| Entity | What it is | Notes |
-|---|---|---|
-| **Business** | The business name | Grouping level; may have many branches |
-| **Branch / location** | A fixed physical address under a business | The filing unit; also a **top-level search entry** (address-first search, §3.2) |
-| **Request type** | The kind of request (e.g. setback inspection request) | The second-stage narrowing filter; must be controlled, not free text, or the filter fragments |
+| Entity | What it is | Input at encoding | Notes |
+|---|---|---|---|
+| **Business** | The business name | **Selection** from existing businesses | Grouping level; may have many branches |
+| **Branch / location** | A fixed physical address under a business | **Typed input with suggestion** — as the clerk types, the selected business's existing branches surface; pick a match, or create a new branch if the building is genuinely new | The filing unit; also a **top-level search entry** (address-first search, §3.2). Typed rather than pure selection because not every address can be pre-populated — but suggestion prevents `Rizal St` / `Rizal Street` fragmenting one building into three branches (§7.2) |
+| **Request type** | The kind of request (e.g. setback inspection request) | **Selection** from existing types | The second-stage narrowing filter; must be controlled, not free text, or the filter fragments |
+
+> **Location is typed, not free text.** The input suggests existing branches of the chosen business; a new branch is *born* from the field only when nothing matches. This keeps the encoder's "just type it" speed while protecting the filing unit from fragmentation — the same suggest-only pattern as business and type, with the same limitation (§7.2) and cleanup owner (§8.2).
 
 **Per-document fields:**
 
@@ -334,6 +336,17 @@ Business (name)
 | Physical location / status | Office vs central storage building | — | QR-driven (§3.4) |
 
 **Field priority (most important first, per the plan):** business + location, request type, date. These are what every search narrows on; everything else is supporting detail.
+
+**Mandatory fields at upload, and their input controls** (chosen so the required fields cannot be entered inconsistently):
+
+| Field | Mandatory | Input control |
+|---|---|---|
+| Business | Yes | Selection from existing businesses |
+| Location (branch) | Yes | Typed input with branch suggestion |
+| Request type | Yes | Selection from existing types |
+| Date | Yes | Date picker |
+
+A document cannot be saved without all four. Title/subject is optional free text; scan date is automatic. Making exactly the four search-narrowing fields mandatory is the deliberate balance between encoding speed (§4.2) and hit rate — every mandatory field slows the clerk, but a blank one of *these four* makes the document unfindable.
 
 **Why the operative date must be the document's own date, not the scan date:** if encoders mix the document date with the scan date, a business's documents sort in a jumbled order and "scroll to the right date" (§3.2 step 4) stops working; and §4.3/§4.4 recency priority collapses because every backlog item would read as current. The date hierarchy is fixed: **approval date first, request date as fallback, scan date never.** (accepted, and to be stated to the office before launch)
 
@@ -412,11 +425,10 @@ This arrangement is temporary by intent and is **built with the consent of the o
 
 The following must be worked through before implementation begins:
 
-- Which metadata fields are **mandatory** vs optional at upload (fields themselves are defined in §6.8)
-- The encoding rule for documents with no request date on them (§8.9)
+- The final date fallback when a document has neither approval nor request date (§8.9)
 - Data model and schema (the §6.8 structure expressed as tables)
 - Architecture and technical design
-- QR code format, generation, and scanning mechanism
+- QR code format and generation, and the scanning mechanism — **target hardware is a phone or handheld scanner** (mechanism, encoding, and how a browser reads the scan are undefined)
 - Test strategy, deployment procedure, and operations
 - Who the internal administrator will be at the end of the six-month interim (§8.8)
 - Whether anyone monitors disk capacity, and how they are alerted (§8.7)
