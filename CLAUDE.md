@@ -34,6 +34,8 @@ Tests run against in-memory SQLite (configured in `phpunit.xml`). `tests/TestCas
 
 ## Architecture
 
+**Domain code follows the layering in [ARCHITECTURE.md](ARCHITECTURE.md)** (data model in [SCHEMA.md](SCHEMA.md)): thin controllers (validate → DTO → Service → response), all business logic in `app/Services/`, repositories as `Repositories/Interface/{Module}` bound to `Repositories/Eloquent/Eloquent{Module}`, versioned `/api/v1` for the Flutter app. Read it before adding domain features.
+
 **Request flow:** Laravel routes (`routes/web.php`, `routes/settings.php`) render Inertia pages from `resources/js/pages/`. Simple pages use `Route::inertia()`; pages needing data use controllers (`app/Http/Controllers/`). There is no Blade UI beyond the root `app` template.
 
 **Wayfinder (frontend ↔ backend bridge):** TypeScript route/controller functions are auto-generated into `resources/js/routes/` and `resources/js/actions/` (regenerated automatically by the Vite plugin, or via `php artisan wayfinder:generate`). Always import these instead of hardcoding URLs — e.g. `import { dashboard } from '@/routes'`. Form variants are enabled (`.form()`).
