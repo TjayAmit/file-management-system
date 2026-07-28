@@ -40,6 +40,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
         Route::patch('/documents/{reference}', [DocumentController::class, 'update'])->name('documents.update');
         Route::post('/documents/{reference}/revert/{changeHistory}', [DocumentController::class, 'revert'])->name('documents.revert');
+        Route::post('/documents/{reference}/replace-file', [DocumentController::class, 'replaceFile'])->name('documents.replace-file');
+        Route::post('/documents/{reference}/revert-file/{version}', [DocumentController::class, 'revertFileVersion'])->name('documents.revert-file');
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {

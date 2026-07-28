@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
 use App\Models\Document as DocumentModel;
+use App\Models\DocumentVersion;
 use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -64,5 +66,21 @@ class DocumentService
     public function revertDocument(DocumentModel $document, ChangeHistory $changeHistory, User $user): DocumentModel
     {
         return $this->documentRepository->revert($document, $changeHistory, $user);
+    }
+
+    /**
+     * Replace document file scan.
+     */
+    public function replaceDocumentFile(DocumentModel $document, ReplaceDocumentFileData $data): DocumentModel
+    {
+        return $this->documentRepository->replaceFile($document, $data);
+    }
+
+    /**
+     * Revert document to a previous file version.
+     */
+    public function revertDocumentFileVersion(DocumentModel $document, DocumentVersion $version, User $user): DocumentModel
+    {
+        return $this->documentRepository->revertFileVersion($document, $version, $user);
     }
 }
