@@ -1,11 +1,19 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\UserController as ApiAdminUserController;
+use App\Http\Controllers\Api\V1\BusinessController as ApiBusinessController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/status', SystemStatusController::class)->name('api.v1.status');
+    Route::get('/businesses', [ApiBusinessController::class, 'index'])->name('api.v1.businesses.index');
+
+    Route::middleware(['auth:sanctum', 'role:editor,admin'])->group(function (): void {
+        Route::post('/businesses', [ApiBusinessController::class, 'store'])->name('api.v1.businesses.store');
+        Route::patch('/businesses/{business}', [ApiBusinessController::class, 'update'])->name('api.v1.businesses.update');
+        Route::post('/businesses/merge', [ApiBusinessController::class, 'merge'])->name('api.v1.businesses.merge');
+    });
 
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('api.v1.admin.')->group(function (): void {
         Route::get('/users', [ApiAdminUserController::class, 'index'])->name('users.index');

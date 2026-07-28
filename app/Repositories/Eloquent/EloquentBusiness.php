@@ -1,0 +1,112 @@
+<?php
+
+namespace App\Repositories\Eloquent;
+
+use App\DTOs\CreateBusinessData;
+use App\DTOs\MergeBusinessData;
+use App\DTOs\UpdateBusinessData;
+use App\Models\Activity;
+use App\Models\Business as BusinessModel;
+use App\Models\User;
+use App\Repositories\Interface\Business as BusinessRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
+
+class EloquentBusiness implements BusinessRepositoryInterface
+{
+    /**
+     * Get all businesses.
+     *
+     * @return Collection<int, BusinessModel>
+     */
+    public function all(): Collection
+    {
+        return BusinessModel::with('branches')->get();
+    }
+
+    /**
+     * Search businesses by name for typeahead suggestions.
+     *
+     * @return Collection<int, BusinessModel>
+     */
+    public function search(string $query): Collection
+    {
+        if (trim($query) === '') {
+            return $this->all();
+        }
+
+        return BusinessModel::where('name', 'like', '%'.$query.'%')
+            ->with('branches')
+            ->limit(15)
+            ->get();
+    }
+
+    /**
+     * Find a business by ID.
+     */
+    public function findById(int $id): ?BusinessModel
+    {
+        return BusinessModel::with('branches')->find($id);
+    }
+
+    /**
+     * Create a new business.
+     */
+    public function create(CreateBusinessData $data): BusinessModel
+    {
+        /** @var BusinessModel $business */
+        $business = BusinessModel::create([
+            'name' => $data->name,
+        ]);
+
+        return $business;
+    }
+
+    /**
+     * Update an existing business.
+     */
+    public function update(BusinessModel $business, UpdateBusinessData $data): BusinessModel
+    {
+        $business->update([
+            'name' => $data->name,
+        ]);
+
+        return $business;
+    }
+
+    /**
+     * Merge source business into target business.
+     */
+    public function merge(MergeBusinessData $data, ?User $user = null): BusinessModel
+    {
+        /** @var BusinessModel $source */
+        $source = BusinessModel::findOrFail($data->sourceId);
+        /** @var BusinessModel $target */
+        $target = BusinessModel::findOrFail($data->targetId);
+
+        $sourceName = $source->name;
+
+        // Re-point branches
+        $source->branches()->update([
+            'business_id' => $target->id,
+        ]);
+
+        // Soft delete duplicate
+        $source->delete();
+
+        // Log in activities
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => BusinessModel::class,
+            'subject_id' => $target->id,
+            'action' => 'business.merged',
+            'details' => [
+                'source_id' => $data->sourceId,
+                'source_name' => $sourceName,
+                'target_id' => $target->id,
+                'target_name' => $target->name,
+            ],
+        ]);
+
+        return $target;
+    }
+}
