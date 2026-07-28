@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\StorageLocationController as ApiAdminStorageLocationController;
 use App\Http\Controllers\Api\V1\Admin\UserController as ApiAdminUserController;
 use App\Http\Controllers\Api\V1\BranchController as ApiBranchController;
 use App\Http\Controllers\Api\V1\BusinessController as ApiBusinessController;
 use App\Http\Controllers\Api\V1\RequestTypeController as ApiRequestTypeController;
+use App\Http\Controllers\Api\V1\StorageLocationController as ApiStorageLocationController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +14,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/businesses', [ApiBusinessController::class, 'index'])->name('api.v1.businesses.index');
     Route::get('/branches', [ApiBranchController::class, 'index'])->name('api.v1.branches.index');
     Route::get('/request-types', [ApiRequestTypeController::class, 'index'])->name('api.v1.request-types.index');
+    Route::get('/storage-locations', [ApiStorageLocationController::class, 'index'])->name('api.v1.storage-locations.index');
 
     Route::middleware(['auth:sanctum', 'role:editor,admin'])->group(function (): void {
         Route::post('/businesses', [ApiBusinessController::class, 'store'])->name('api.v1.businesses.store');
@@ -34,5 +37,8 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/users/{user}', [ApiAdminUserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/deactivate', [ApiAdminUserController::class, 'deactivate'])->name('users.deactivate');
         Route::post('/users/{user}/reset-password', [ApiAdminUserController::class, 'resetPassword'])->name('users.reset-password');
+
+        Route::post('/storage-locations', [ApiAdminStorageLocationController::class, 'store'])->name('storage-locations.store');
+        Route::patch('/storage-locations/{storageLocation}', [ApiAdminStorageLocationController::class, 'update'])->name('storage-locations.update');
     });
 });
