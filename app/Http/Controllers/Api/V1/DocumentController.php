@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Http\Controllers\Controller;
 use App\Models\ChangeHistory;
+use App\Models\DocumentVersion;
 use App\Services\DocumentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -133,5 +135,49 @@ class DocumentController extends Controller
         $revertedDocument = $this->documentService->revertDocument($document, $changeHistory, $request->user());
 
         return $this->successResponse($revertedDocument, 'Document metadata reverted successfully');
+    }
+
+    /**
+     * Replace document PDF file scan.
+     */
+    public function replaceFile(Request $request, string $reference): JsonResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            return $this->errorResponse('Document not found', 404);
+        }
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+        ]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+
+        $data = new ReplaceDocumentFileData(
+            file: $file,
+            user: $request->user(),
+        );
+
+        $updatedDocument = $this->documentService->replaceDocumentFile($document, $data);
+
+        return $this->successResponse($updatedDocument, 'Document file replaced successfully');
+    }
+
+    /**
+     * Revert document to a previous file version.
+     */
+    public function revertFileVersion(Request $request, string $reference, DocumentVersion $version): JsonResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            return $this->errorResponse('Document not found', 404);
+        }
+
+        $updatedDocument = $this->documentService->revertDocumentFileVersion($document, $version, $request->user());
+
+        return $this->successResponse($updatedDocument, 'Document file version reverted successfully');
     }
 }

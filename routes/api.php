@@ -36,6 +36,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/documents', [ApiDocumentController::class, 'store'])->name('api.v1.documents.store');
         Route::patch('/documents/{reference}', [ApiDocumentController::class, 'update'])->name('api.v1.documents.update');
         Route::post('/documents/{reference}/revert/{changeHistory}', [ApiDocumentController::class, 'revert'])->name('api.v1.documents.revert');
+        Route::post('/documents/{reference}/replace-file', [ApiDocumentController::class, 'replaceFile'])->name('api.v1.documents.replace-file');
+        Route::post('/documents/{reference}/revert-file/{version}', [ApiDocumentController::class, 'revertFileVersion'])->name('api.v1.documents.revert-file');
     });
 
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('api.v1.admin.')->group(function (): void {

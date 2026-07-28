@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
+use App\Models\DocumentVersion;
 use App\Services\DocumentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -135,5 +137,49 @@ class DocumentController extends Controller
         $this->documentService->revertDocument($document, $changeHistory, $request->user());
 
         return back()->with('status', 'Document metadata reverted successfully');
+    }
+
+    /**
+     * Replace document PDF file scan.
+     */
+    public function replaceFile(Request $request, string $reference): RedirectResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+        ]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+
+        $data = new ReplaceDocumentFileData(
+            file: $file,
+            user: $request->user(),
+        );
+
+        $this->documentService->replaceDocumentFile($document, $data);
+
+        return back()->with('status', 'Document file replaced successfully');
+    }
+
+    /**
+     * Revert document to a previous file version.
+     */
+    public function revertFileVersion(Request $request, string $reference, DocumentVersion $version): RedirectResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $this->documentService->revertDocumentFileVersion($document, $version, $request->user());
+
+        return back()->with('status', 'Document file version reverted successfully');
     }
 }

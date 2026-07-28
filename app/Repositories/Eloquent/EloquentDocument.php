@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\Activity;
 use App\Models\ChangeHistory;
@@ -31,7 +32,7 @@ class EloquentDocument implements DocumentRepositoryInterface
      */
     public function findById(int $id): ?DocumentModel
     {
-        return DocumentModel::with(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories'])->find($id);
+        return DocumentModel::with(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories.changedBy'])->find($id);
     }
 
     /**
@@ -196,5 +197,71 @@ class EloquentDocument implements DocumentRepositoryInterface
 
         /** @var DocumentModel */
         return $document->fresh(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'changeHistories.changedBy']);
+    }
+
+    /**
+     * Replace document file scan, creating a new DocumentVersion and flipping is_current.
+     */
+    public function replaceFile(DocumentModel $document, ReplaceDocumentFileData $data): DocumentModel
+    {
+        $path = $data->file->store('documents', 'private');
+
+        // Set existing versions to not current
+        $document->versions()->update(['is_current' => false]);
+
+        $newVersion = DocumentVersion::create([
+            'document_id' => $document->id,
+            'path' => $path,
+            'original_name' => $data->file->getClientOriginalName(),
+            'size' => $data->file->getSize(),
+            'mime_type' => $data->file->getClientMimeType(),
+            'is_current' => true,
+            'uploaded_by' => $data->user->id,
+        ]);
+
+        Activity::create([
+            'user_id' => $data->user->id,
+            'subject_type' => DocumentModel::class,
+            'subject_id' => $document->id,
+            'action' => 'document.file_replaced',
+            'details' => [
+                'document_id' => $document->id,
+                'new_version_id' => $newVersion->id,
+                'original_name' => $data->file->getClientOriginalName(),
+            ],
+        ]);
+
+        /** @var DocumentModel */
+        return $document->fresh(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories.changedBy']);
+    }
+
+    /**
+     * Revert document to a previous file version.
+     */
+    public function revertFileVersion(DocumentModel $document, DocumentVersion $version, User $user): DocumentModel
+    {
+        if ($version->document_id !== $document->id) {
+            throw new AccessDeniedHttpException('Version does not belong to this document.');
+        }
+
+        // Set all versions to not current
+        $document->versions()->update(['is_current' => false]);
+
+        // Mark target version as current
+        $version->update(['is_current' => true]);
+
+        Activity::create([
+            'user_id' => $user->id,
+            'subject_type' => DocumentModel::class,
+            'subject_id' => $document->id,
+            'action' => 'document.file_version_reverted',
+            'details' => [
+                'document_id' => $document->id,
+                'reverted_version_id' => $version->id,
+            ],
+        ]);
+
+        /** @var DocumentModel */
+        return $document->fresh(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories.changedBy']);
     }
 }
