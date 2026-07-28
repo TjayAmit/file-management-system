@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
+use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\SystemStatusController;
 use Illuminate\Support\Facades\Route;
@@ -12,11 +13,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
     Route::get('/businesses', [BusinessController::class, 'index'])->name('businesses.index');
+    Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
 
     Route::middleware(['role:editor,admin'])->group(function () {
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');
         Route::patch('/businesses/{business}', [BusinessController::class, 'update'])->name('businesses.update');
         Route::post('/businesses/merge', [BusinessController::class, 'merge'])->name('businesses.merge');
+
+        Route::post('/branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::patch('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::post('/branches/{branch}/reparent', [BranchController::class, 'reparent'])->name('branches.reparent');
+        Route::post('/branches/merge', [BranchController::class, 'merge'])->name('branches.merge');
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
