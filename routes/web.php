@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\StorageLocationController as WebAdminStorageLocat
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\RequestTypeController;
 use App\Http\Controllers\StorageLocationController;
 use App\Http\Controllers\SystemStatusController;
@@ -19,6 +20,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
     Route::get('/request-types', [RequestTypeController::class, 'index'])->name('request-types.index');
     Route::get('/storage-locations', [StorageLocationController::class, 'index'])->name('storage-locations.index');
+    Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
 
     Route::middleware(['role:editor,admin'])->group(function () {
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');
@@ -33,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/request-types', [RequestTypeController::class, 'store'])->name('request-types.store');
         Route::patch('/request-types/{requestType}', [RequestTypeController::class, 'update'])->name('request-types.update');
         Route::post('/request-types/merge', [RequestTypeController::class, 'merge'])->name('request-types.merge');
+
+        Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Admin\StorageLocationController as ApiAdminStora
 use App\Http\Controllers\Api\V1\Admin\UserController as ApiAdminUserController;
 use App\Http\Controllers\Api\V1\BranchController as ApiBranchController;
 use App\Http\Controllers\Api\V1\BusinessController as ApiBusinessController;
+use App\Http\Controllers\Api\V1\DocumentController as ApiDocumentController;
 use App\Http\Controllers\Api\V1\RequestTypeController as ApiRequestTypeController;
 use App\Http\Controllers\Api\V1\StorageLocationController as ApiStorageLocationController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
@@ -15,6 +16,8 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/branches', [ApiBranchController::class, 'index'])->name('api.v1.branches.index');
     Route::get('/request-types', [ApiRequestTypeController::class, 'index'])->name('api.v1.request-types.index');
     Route::get('/storage-locations', [ApiStorageLocationController::class, 'index'])->name('api.v1.storage-locations.index');
+    Route::get('/documents', [ApiDocumentController::class, 'index'])->name('api.v1.documents.index');
+    Route::get('/documents/{reference}', [ApiDocumentController::class, 'show'])->name('api.v1.documents.show');
 
     Route::middleware(['auth:sanctum', 'role:editor,admin'])->group(function (): void {
         Route::post('/businesses', [ApiBusinessController::class, 'store'])->name('api.v1.businesses.store');
@@ -29,6 +32,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/request-types', [ApiRequestTypeController::class, 'store'])->name('api.v1.request-types.store');
         Route::patch('/request-types/{requestType}', [ApiRequestTypeController::class, 'update'])->name('api.v1.request-types.update');
         Route::post('/request-types/merge', [ApiRequestTypeController::class, 'merge'])->name('api.v1.request-types.merge');
+
+        Route::post('/documents', [ApiDocumentController::class, 'store'])->name('api.v1.documents.store');
     });
 
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('api.v1.admin.')->group(function (): void {
