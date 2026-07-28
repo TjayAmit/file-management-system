@@ -3,7 +3,10 @@
 namespace App\Repositories\Interface;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\UpdateDocumentData;
+use App\Models\ChangeHistory;
 use App\Models\Document as DocumentModel;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
 interface Document
@@ -29,4 +32,14 @@ interface Document
      * Create a new document with uploaded PDF version #1.
      */
     public function create(CreateDocumentData $data): DocumentModel;
+
+    /**
+     * Update document metadata and track changes in change_histories.
+     */
+    public function update(DocumentModel $document, UpdateDocumentData $data): DocumentModel;
+
+    /**
+     * Revert a specific change history entry on a document.
+     */
+    public function revert(DocumentModel $document, ChangeHistory $changeHistory, User $user): DocumentModel;
 }

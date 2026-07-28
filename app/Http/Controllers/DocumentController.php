@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\UpdateDocumentData;
+use App\Models\ChangeHistory;
 use App\Services\DocumentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -80,5 +82,58 @@ class DocumentController extends Controller
         $document = $this->documentService->createDocument($data);
 
         return redirect()->route('documents.show', $document->reference)->with('status', 'Document encoded successfully');
+    }
+
+    /**
+     * Update document metadata.
+     */
+    public function update(Request $request, string $reference): RedirectResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
+            'storage_location_id' => ['nullable', 'integer', 'exists:storage_locations,id'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'approval_date' => ['nullable', 'date'],
+            'request_date' => ['nullable', 'date'],
+            'remarks' => ['nullable', 'string'],
+        ]);
+
+        $data = new UpdateDocumentData(
+            branchId: isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
+            requestTypeId: isset($validated['request_type_id']) ? (int) $validated['request_type_id'] : null,
+            storageLocationId: isset($validated['storage_location_id']) ? (int) $validated['storage_location_id'] : null,
+            title: isset($validated['title']) ? (string) $validated['title'] : null,
+            approvalDate: isset($validated['approval_date']) ? (string) $validated['approval_date'] : null,
+            requestDate: isset($validated['request_date']) ? (string) $validated['request_date'] : null,
+            remarks: isset($validated['remarks']) ? (string) $validated['remarks'] : null,
+            updatedBy: $request->user(),
+        );
+
+        $this->documentService->updateDocument($document, $data);
+
+        return back()->with('status', 'Document metadata updated successfully');
+    }
+
+    /**
+     * Revert a change history entry.
+     */
+    public function revert(Request $request, string $reference, ChangeHistory $changeHistory): RedirectResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $this->documentService->revertDocument($document, $changeHistory, $request->user());
+
+        return back()->with('status', 'Document metadata reverted successfully');
     }
 }

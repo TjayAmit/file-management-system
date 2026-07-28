@@ -66,4 +66,14 @@ class ChangeHistory extends Model
     {
         return $this->belongsTo(User::class, 'changed_by');
     }
+
+    /**
+     * Get the user who made the change.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function changedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'changed_by');
+    }
 }
