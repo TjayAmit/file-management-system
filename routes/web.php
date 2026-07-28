@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\RequestTypeController;
 use App\Http\Controllers\SystemStatusController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/businesses', [BusinessController::class, 'index'])->name('businesses.index');
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
+    Route::get('/request-types', [RequestTypeController::class, 'index'])->name('request-types.index');
 
     Route::middleware(['role:editor,admin'])->group(function () {
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');
@@ -24,6 +26,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::post('/branches/{branch}/reparent', [BranchController::class, 'reparent'])->name('branches.reparent');
         Route::post('/branches/merge', [BranchController::class, 'merge'])->name('branches.merge');
+
+        Route::post('/request-types', [RequestTypeController::class, 'store'])->name('request-types.store');
+        Route::patch('/request-types/{requestType}', [RequestTypeController::class, 'update'])->name('request-types.update');
+        Route::post('/request-types/merge', [RequestTypeController::class, 'merge'])->name('request-types.merge');
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
