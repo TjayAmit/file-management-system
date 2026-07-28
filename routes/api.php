@@ -34,6 +34,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/request-types/merge', [ApiRequestTypeController::class, 'merge'])->name('api.v1.request-types.merge');
 
         Route::post('/documents', [ApiDocumentController::class, 'store'])->name('api.v1.documents.store');
+        Route::patch('/documents/{reference}', [ApiDocumentController::class, 'update'])->name('api.v1.documents.update');
+        Route::post('/documents/{reference}/revert/{changeHistory}', [ApiDocumentController::class, 'revert'])->name('api.v1.documents.revert');
     });
 
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('api.v1.admin.')->group(function (): void {

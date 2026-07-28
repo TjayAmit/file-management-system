@@ -38,6 +38,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/request-types/merge', [RequestTypeController::class, 'merge'])->name('request-types.merge');
 
         Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
+        Route::patch('/documents/{reference}', [DocumentController::class, 'update'])->name('documents.update');
+        Route::post('/documents/{reference}/revert/{changeHistory}', [DocumentController::class, 'revert'])->name('documents.revert');
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {

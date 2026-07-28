@@ -3,12 +3,16 @@
 namespace App\Repositories\Eloquent;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\UpdateDocumentData;
 use App\Models\Activity;
+use App\Models\ChangeHistory;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
+use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class EloquentDocument implements DocumentRepositoryInterface
 {
@@ -36,7 +40,7 @@ class EloquentDocument implements DocumentRepositoryInterface
     public function findByReference(string $reference): ?DocumentModel
     {
         return DocumentModel::where('reference', $reference)
-            ->with(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories'])
+            ->with(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories.changedBy'])
             ->first();
     }
 
@@ -87,5 +91,110 @@ class EloquentDocument implements DocumentRepositoryInterface
         ]);
 
         return $document->load(['branch.business', 'requestType', 'storageLocation', 'currentVersion']);
+    }
+
+    /**
+     * Update document metadata and track changes in change_histories.
+     */
+    public function update(DocumentModel $document, UpdateDocumentData $data): DocumentModel
+    {
+        $fields = [
+            'branch_id' => $data->branchId,
+            'request_type_id' => $data->requestTypeId,
+            'storage_location_id' => $data->storageLocationId,
+            'title' => $data->title,
+            'approval_date' => $data->approvalDate,
+            'request_date' => $data->requestDate,
+        ];
+
+        $payload = [];
+
+        foreach ($fields as $field => $newValue) {
+            if ($newValue === null) {
+                continue;
+            }
+
+            $oldValue = $document->getAttribute($field);
+
+            $oldStr = $oldValue !== null ? (string) $oldValue : null;
+            $newStr = (string) $newValue;
+
+            if ($oldStr !== $newStr) {
+                $payload[$field] = $newValue;
+
+                ChangeHistory::create([
+                    'document_id' => $document->id,
+                    'field' => $field,
+                    'old_value' => $oldStr,
+                    'new_value' => $newStr,
+                    'changed_by' => $data->updatedBy?->id,
+                    'is_revert' => false,
+                ]);
+            }
+        }
+
+        if (! empty($payload)) {
+            $document->update($payload);
+
+            Activity::create([
+                'user_id' => $data->updatedBy?->id,
+                'subject_type' => DocumentModel::class,
+                'subject_id' => $document->id,
+                'action' => 'document.updated',
+                'details' => [
+                    'document_id' => $document->id,
+                    'updated_fields' => array_keys($payload),
+                ],
+            ]);
+        }
+
+        /** @var DocumentModel */
+        return $document->fresh(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'changeHistories.changedBy']);
+    }
+
+    /**
+     * Revert a specific change history entry on a document.
+     */
+    public function revert(DocumentModel $document, ChangeHistory $changeHistory, User $user): DocumentModel
+    {
+        // Authorization check: original editor or admin fallback
+        if ($changeHistory->changed_by !== $user->id && ! $user->isAdmin()) {
+            throw new AccessDeniedHttpException('Only the original editor or an admin can revert this change.');
+        }
+
+        $field = $changeHistory->field;
+        $currentValue = $document->getAttribute($field);
+        $currentStr = $currentValue !== null ? (string) $currentValue : null;
+        $revertToValue = $changeHistory->old_value;
+
+        // Apply revert to document
+        $document->update([
+            $field => $revertToValue,
+        ]);
+
+        // Create change history entry marked as is_revert = true
+        ChangeHistory::create([
+            'document_id' => $document->id,
+            'field' => $field,
+            'old_value' => $currentStr,
+            'new_value' => $revertToValue,
+            'changed_by' => $user->id,
+            'is_revert' => true,
+        ]);
+
+        Activity::create([
+            'user_id' => $user->id,
+            'subject_type' => DocumentModel::class,
+            'subject_id' => $document->id,
+            'action' => 'document.reverted',
+            'details' => [
+                'change_history_id' => $changeHistory->id,
+                'field' => $field,
+                'reverted_to' => $revertToValue,
+            ],
+        ]);
+
+        /** @var DocumentModel */
+        return $document->fresh(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'changeHistories.changedBy']);
     }
 }

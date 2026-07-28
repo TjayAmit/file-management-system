@@ -131,6 +131,16 @@ class Document extends Model
     }
 
     /**
+     * Alias for change history entries.
+     *
+     * @return HasMany<ChangeHistory, $this>
+     */
+    public function changeHistories(): HasMany
+    {
+        return $this->hasMany(ChangeHistory::class);
+    }
+
+    /**
      * Get the deletion requests for the document.
      *
      * @return HasMany<DeletionRequest, $this>
