@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
@@ -34,14 +35,14 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === 'admin' || $this->hasRole('admin');
     }
 
     /**
@@ -49,7 +50,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     public function isEditor(): bool
     {
-        return $this->role === 'editor';
+        return $this->role === 'editor' || $this->hasRole('editor');
     }
 
     /**
@@ -57,7 +58,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     public function isViewer(): bool
     {
-        return $this->role === 'viewer';
+        return $this->role === 'viewer' || $this->hasRole('viewer');
     }
 
     /**
