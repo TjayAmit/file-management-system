@@ -11,6 +11,8 @@ use App\Models\DocumentVersion;
 use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentService
 {
@@ -82,5 +84,29 @@ class DocumentService
     public function revertDocumentFileVersion(DocumentModel $document, DocumentVersion $version, User $user): DocumentModel
     {
         return $this->documentRepository->revertFileVersion($document, $version, $user);
+    }
+
+    /**
+     * Serve the document's current PDF file, recording an access log entry.
+     */
+    public function serveDocument(DocumentModel $document, string $action, User $user): StreamedResponse
+    {
+        $version = $document->currentVersion;
+
+        if (! $version) {
+            abort(404, 'No file version available for this document.');
+        }
+
+        $this->documentRepository->logAccess($document, $user, $action);
+
+        $disk = Storage::disk('private');
+
+        if ($action === 'download') {
+            return $disk->download($version->path, $version->original_name);
+        }
+
+        return $disk->response($version->path, $version->original_name, [
+            'Content-Type' => $version->mime_type,
+        ]);
     }
 }

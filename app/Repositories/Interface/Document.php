@@ -5,6 +5,7 @@ namespace App\Repositories\Interface;
 use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
+use App\Models\AccessLog;
 use App\Models\ChangeHistory;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
@@ -54,4 +55,9 @@ interface Document
      * Revert document to a previous file version.
      */
     public function revertFileVersion(DocumentModel $document, DocumentVersion $version, User $user): DocumentModel;
+
+    /**
+     * Record an access log entry when the document PDF is served.
+     */
+    public function logAccess(DocumentModel $document, User $user, string $action): AccessLog;
 }

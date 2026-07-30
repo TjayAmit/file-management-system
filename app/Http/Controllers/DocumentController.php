@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
 {
@@ -181,5 +182,23 @@ class DocumentController extends Controller
         $this->documentService->revertDocumentFileVersion($document, $version, $request->user());
 
         return back()->with('status', 'Document file version reverted successfully');
+    }
+
+    /**
+     * Serve the document's PDF for viewing, downloading, or printing.
+     */
+    public function serveFile(Request $request, string $reference): StreamedResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $validated = $request->validate([
+            'action' => ['required', 'string', 'in:view,download,print'],
+        ]);
+
+        return $this->documentService->serveDocument($document, (string) $validated['action'], $request->user());
     }
 }

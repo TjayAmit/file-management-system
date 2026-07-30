@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/storage-locations', [StorageLocationController::class, 'index'])->name('storage-locations.index');
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->name('documents.file');
 
     Route::middleware(['role:editor,admin'])->group(function () {
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');

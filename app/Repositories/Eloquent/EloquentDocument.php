@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
+use App\Models\AccessLog;
 use App\Models\Activity;
 use App\Models\ChangeHistory;
 use App\Models\Document as DocumentModel;
@@ -263,5 +264,17 @@ class EloquentDocument implements DocumentRepositoryInterface
 
         /** @var DocumentModel */
         return $document->fresh(['branch.business', 'requestType', 'storageLocation', 'currentVersion', 'versions', 'changeHistories.changedBy']);
+    }
+
+    /**
+     * Record an access log entry when the document PDF is served.
+     */
+    public function logAccess(DocumentModel $document, User $user, string $action): AccessLog
+    {
+        return AccessLog::create([
+            'user_id' => $user->id,
+            'document_id' => $document->id,
+            'action' => $action,
+        ]);
     }
 }
