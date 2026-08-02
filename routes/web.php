@@ -6,6 +6,7 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\RequestTypeController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StorageLocationController;
 use App\Http\Controllers\SystemStatusController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
     Route::get('/request-types', [RequestTypeController::class, 'index'])->name('request-types.index');
     Route::get('/storage-locations', [StorageLocationController::class, 'index'])->name('storage-locations.index');
+    Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
     Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->name('documents.file');
