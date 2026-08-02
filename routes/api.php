@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\DocumentController as ApiDocumentController;
 use App\Http\Controllers\Api\V1\RequestTypeController as ApiRequestTypeController;
 use App\Http\Controllers\Api\V1\StorageLocationController as ApiStorageLocationController;
 use App\Http\Controllers\Api\V1\SystemStatusController;
+use App\Http\Controllers\Api\V1\TransferController as ApiTransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -38,9 +39,12 @@ Route::prefix('v1')->group(function (): void {
 
         Route::post('/documents', [ApiDocumentController::class, 'store'])->name('api.v1.documents.store');
         Route::patch('/documents/{reference}', [ApiDocumentController::class, 'update'])->name('api.v1.documents.update');
+        Route::patch('/documents/{reference}/location', [ApiDocumentController::class, 'updateLocation'])->name('api.v1.documents.update-location');
         Route::post('/documents/{reference}/revert/{changeHistory}', [ApiDocumentController::class, 'revert'])->name('api.v1.documents.revert');
         Route::post('/documents/{reference}/replace-file', [ApiDocumentController::class, 'replaceFile'])->name('api.v1.documents.replace-file');
         Route::post('/documents/{reference}/revert-file/{version}', [ApiDocumentController::class, 'revertFileVersion'])->name('api.v1.documents.revert-file');
+
+        Route::post('/transfers', [ApiTransferController::class, 'store'])->name('api.v1.transfers.store');
     });
 
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('api.v1.admin.')->group(function (): void {
