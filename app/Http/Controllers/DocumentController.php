@@ -64,6 +64,7 @@ class DocumentController extends Controller
 
         return Inertia::render('documents/show', [
             'document' => $document,
+            'storageLocations' => $this->storageLocationService->getAllStorageLocations(),
         ]);
     }
 
