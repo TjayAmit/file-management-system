@@ -33,12 +33,12 @@ interface RequestType
     /**
      * Create a new request type.
      */
-    public function create(CreateRequestTypeData $data): RequestTypeModel;
+    public function create(CreateRequestTypeData $data, ?User $user = null): RequestTypeModel;
 
     /**
      * Update an existing request type.
      */
-    public function update(RequestTypeModel $requestType, UpdateRequestTypeData $data): RequestTypeModel;
+    public function update(RequestTypeModel $requestType, UpdateRequestTypeData $data, ?User $user = null): RequestTypeModel;
 
     /**
      * Merge source request type into target request type.

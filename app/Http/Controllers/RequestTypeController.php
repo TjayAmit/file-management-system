@@ -47,7 +47,7 @@ class RequestTypeController extends Controller
             name: (string) $validated['name'],
         );
 
-        $this->requestTypeService->createRequestType($data);
+        $this->requestTypeService->createRequestType($data, $request->user());
 
         return back()->with('status', 'Request type created successfully');
     }
@@ -65,7 +65,7 @@ class RequestTypeController extends Controller
             name: (string) $validated['name'],
         );
 
-        $this->requestTypeService->updateRequestType($requestType, $data);
+        $this->requestTypeService->updateRequestType($requestType, $data, $request->user());
 
         return back()->with('status', 'Request type updated successfully');
     }

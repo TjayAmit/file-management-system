@@ -35,32 +35,32 @@ class UserService
     /**
      * Create a new user.
      */
-    public function createUser(CreateUserData $data): UserModel
+    public function createUser(CreateUserData $data, ?UserModel $actor = null): UserModel
     {
-        return $this->userRepository->create($data);
+        return $this->userRepository->create($data, $actor);
     }
 
     /**
      * Update user details or role.
      */
-    public function updateUser(UserModel $user, UpdateUserData $data): UserModel
+    public function updateUser(UserModel $user, UpdateUserData $data, ?UserModel $actor = null): UserModel
     {
-        return $this->userRepository->update($user, $data);
+        return $this->userRepository->update($user, $data, $actor);
     }
 
     /**
      * Deactivate a user.
      */
-    public function deactivateUser(UserModel $user): UserModel
+    public function deactivateUser(UserModel $user, ?UserModel $actor = null): UserModel
     {
-        return $this->userRepository->deactivate($user);
+        return $this->userRepository->deactivate($user, $actor);
     }
 
     /**
      * Reset user password to a temporary password (offline reset).
      */
-    public function resetTemporaryPassword(UserModel $user, string $temporaryPassword): UserModel
+    public function resetTemporaryPassword(UserModel $user, string $temporaryPassword, ?UserModel $actor = null): UserModel
     {
-        return $this->userRepository->setTemporaryPassword($user, $temporaryPassword);
+        return $this->userRepository->setTemporaryPassword($user, $temporaryPassword, $actor);
     }
 }

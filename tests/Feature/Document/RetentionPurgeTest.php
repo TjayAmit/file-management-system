@@ -23,6 +23,12 @@ test('superseded document versions older than 90 days are purged and their files
 
     $this->assertDatabaseMissing('document_versions', ['id' => $oldVersion->id]);
     Storage::disk('private')->assertMissing($oldVersion->path);
+
+    $this->assertDatabaseHas('activities', [
+        'subject_type' => Document::class,
+        'subject_id' => $document->id,
+        'action' => 'document_version.purged',
+    ]);
 });
 
 test('superseded document versions within 90 days are left untouched', function () {
@@ -87,6 +93,12 @@ test('soft-deleted documents older than 90 days are purged along with their file
     $this->assertDatabaseMissing('access_logs', ['id' => $accessLog->id]);
     $this->assertDatabaseHas('search_logs', ['id' => $searchLog->id, 'opened_document_id' => null]);
     Storage::disk('private')->assertMissing($version->path);
+
+    $this->assertDatabaseHas('activities', [
+        'subject_type' => Document::class,
+        'subject_id' => $document->id,
+        'action' => 'document.purged',
+    ]);
 });
 
 test('soft-deleted documents within 90 days are left untouched', function () {

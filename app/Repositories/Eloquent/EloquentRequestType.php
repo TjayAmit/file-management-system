@@ -50,11 +50,21 @@ class EloquentRequestType implements RequestTypeRepositoryInterface
     /**
      * Create a new request type.
      */
-    public function create(CreateRequestTypeData $data): RequestTypeModel
+    public function create(CreateRequestTypeData $data, ?User $user = null): RequestTypeModel
     {
         /** @var RequestTypeModel $requestType */
         $requestType = RequestTypeModel::create([
             'name' => $data->name,
+        ]);
+
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => RequestTypeModel::class,
+            'subject_id' => $requestType->id,
+            'action' => 'request_type.created',
+            'details' => [
+                'name' => $requestType->name,
+            ],
         ]);
 
         return $requestType;
@@ -63,10 +73,23 @@ class EloquentRequestType implements RequestTypeRepositoryInterface
     /**
      * Update an existing request type.
      */
-    public function update(RequestTypeModel $requestType, UpdateRequestTypeData $data): RequestTypeModel
+    public function update(RequestTypeModel $requestType, UpdateRequestTypeData $data, ?User $user = null): RequestTypeModel
     {
+        $oldName = $requestType->name;
+
         $requestType->update([
             'name' => $data->name,
+        ]);
+
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => RequestTypeModel::class,
+            'subject_id' => $requestType->id,
+            'action' => 'request_type.updated',
+            'details' => [
+                'old_name' => $oldName,
+                'new_name' => $requestType->name,
+            ],
         ]);
 
         return $requestType;

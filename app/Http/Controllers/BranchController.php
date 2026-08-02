@@ -53,7 +53,7 @@ class BranchController extends Controller
             location: (string) $validated['location'],
         );
 
-        $this->branchService->createBranch($data);
+        $this->branchService->createBranch($data, $request->user());
 
         return back()->with('status', 'Branch created successfully');
     }
@@ -71,7 +71,7 @@ class BranchController extends Controller
             location: (string) $validated['location'],
         );
 
-        $this->branchService->updateBranch($branch, $data);
+        $this->branchService->updateBranch($branch, $data, $request->user());
 
         return back()->with('status', 'Branch updated successfully');
     }

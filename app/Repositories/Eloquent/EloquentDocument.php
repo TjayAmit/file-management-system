@@ -407,6 +407,18 @@ class EloquentDocument implements DocumentRepositoryInterface
 
         foreach ($versions as $version) {
             $disk->delete($version->path);
+
+            Activity::create([
+                'user_id' => null,
+                'subject_type' => DocumentModel::class,
+                'subject_id' => $version->document_id,
+                'action' => 'document_version.purged',
+                'details' => [
+                    'version_id' => $version->id,
+                    'original_name' => $version->original_name,
+                ],
+            ]);
+
             $version->delete();
         }
 
@@ -433,6 +445,16 @@ class EloquentDocument implements DocumentRepositoryInterface
             AccessLog::where('document_id', $document->id)->delete();
             SearchLog::where('opened_document_id', $document->id)->update(['opened_document_id' => null]);
             TransferItem::where('document_id', $document->id)->delete();
+
+            Activity::create([
+                'user_id' => null,
+                'subject_type' => DocumentModel::class,
+                'subject_id' => $document->id,
+                'action' => 'document.purged',
+                'details' => [
+                    'reference' => $document->reference,
+                ],
+            ]);
 
             $document->forceDelete();
         }

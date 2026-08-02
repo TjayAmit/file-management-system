@@ -47,17 +47,17 @@ class RequestTypeService
     /**
      * Create a new request type.
      */
-    public function createRequestType(CreateRequestTypeData $data): RequestTypeModel
+    public function createRequestType(CreateRequestTypeData $data, ?User $user = null): RequestTypeModel
     {
-        return $this->requestTypeRepository->create($data);
+        return $this->requestTypeRepository->create($data, $user);
     }
 
     /**
      * Update an existing request type.
      */
-    public function updateRequestType(RequestTypeModel $requestType, UpdateRequestTypeData $data): RequestTypeModel
+    public function updateRequestType(RequestTypeModel $requestType, UpdateRequestTypeData $data, ?User $user = null): RequestTypeModel
     {
-        return $this->requestTypeRepository->update($requestType, $data);
+        return $this->requestTypeRepository->update($requestType, $data, $user);
     }
 
     /**

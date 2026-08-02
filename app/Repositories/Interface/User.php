@@ -24,20 +24,20 @@ interface User
     /**
      * Create a new user.
      */
-    public function create(CreateUserData $data): UserModel;
+    public function create(CreateUserData $data, ?UserModel $actor = null): UserModel;
 
     /**
      * Update an existing user.
      */
-    public function update(UserModel $user, UpdateUserData $data): UserModel;
+    public function update(UserModel $user, UpdateUserData $data, ?UserModel $actor = null): UserModel;
 
     /**
      * Deactivate a user.
      */
-    public function deactivate(UserModel $user): UserModel;
+    public function deactivate(UserModel $user, ?UserModel $actor = null): UserModel;
 
     /**
      * Set a temporary password for a user (offline reset).
      */
-    public function setTemporaryPassword(UserModel $user, string $password): UserModel;
+    public function setTemporaryPassword(UserModel $user, string $password, ?UserModel $actor = null): UserModel;
 }
