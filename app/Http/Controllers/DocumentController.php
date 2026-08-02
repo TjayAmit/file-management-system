@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
+use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
 use App\Models\DocumentVersion;
@@ -210,5 +211,30 @@ class DocumentController extends Controller
         ]);
 
         return $this->documentService->serveDocument($document, (string) $validated['action'], $request->user());
+    }
+
+    /**
+     * File a deletion request for a document.
+     */
+    public function requestDeletion(Request $request, string $reference): RedirectResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $data = new RequestDeletionData(
+            reason: (string) $validated['reason'],
+            requestedBy: $request->user(),
+        );
+
+        $this->documentService->requestDeletion($document, $data);
+
+        return back()->with('status', 'Deletion request filed successfully');
     }
 }

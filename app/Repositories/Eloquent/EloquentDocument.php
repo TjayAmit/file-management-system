@@ -4,10 +4,12 @@ namespace App\Repositories\Eloquent;
 
 use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
+use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\AccessLog;
 use App\Models\Activity;
 use App\Models\ChangeHistory;
+use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
 use App\Models\User;
@@ -15,6 +17,7 @@ use App\Repositories\Interface\Document as DocumentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class EloquentDocument implements DocumentRepositoryInterface
 {
@@ -296,5 +299,95 @@ class EloquentDocument implements DocumentRepositoryInterface
             'document_id' => $document->id,
             'action' => $action,
         ]);
+    }
+
+    /**
+     * File a deletion request for a document, hiding it from search while pending.
+     */
+    public function requestDeletion(DocumentModel $document, RequestDeletionData $data): DeletionRequest
+    {
+        $deletionRequest = DeletionRequest::create([
+            'document_id' => $document->id,
+            'requested_by' => $data->requestedBy->id,
+            'reason' => $data->reason,
+            'status' => 'pending',
+        ]);
+
+        $document->update(['is_hidden' => true]);
+
+        Activity::create([
+            'user_id' => $data->requestedBy->id,
+            'subject_type' => DocumentModel::class,
+            'subject_id' => $document->id,
+            'action' => 'deletion.requested',
+            'details' => [
+                'deletion_request_id' => $deletionRequest->id,
+                'reason' => $data->reason,
+            ],
+        ]);
+
+        return $deletionRequest;
+    }
+
+    /**
+     * Approve a pending deletion request, soft-deleting the document.
+     */
+    public function approveDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest
+    {
+        if ($deletionRequest->status !== 'pending') {
+            throw new ConflictHttpException('This deletion request has already been decided.');
+        }
+
+        $deletionRequest->update([
+            'status' => 'approved',
+            'approved_by' => $user->id,
+            'decided_at' => now(),
+        ]);
+
+        $document = $deletionRequest->document;
+        $document->delete();
+
+        Activity::create([
+            'user_id' => $user->id,
+            'subject_type' => DocumentModel::class,
+            'subject_id' => $document->id,
+            'action' => 'deletion.approved',
+            'details' => [
+                'deletion_request_id' => $deletionRequest->id,
+            ],
+        ]);
+
+        return $deletionRequest->fresh(['document', 'requester', 'approver']);
+    }
+
+    /**
+     * Reject a pending deletion request, restoring the document to search.
+     */
+    public function rejectDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest
+    {
+        if ($deletionRequest->status !== 'pending') {
+            throw new ConflictHttpException('This deletion request has already been decided.');
+        }
+
+        $deletionRequest->update([
+            'status' => 'rejected',
+            'approved_by' => $user->id,
+            'decided_at' => now(),
+        ]);
+
+        $document = $deletionRequest->document;
+        $document->update(['is_hidden' => false]);
+
+        Activity::create([
+            'user_id' => $user->id,
+            'subject_type' => DocumentModel::class,
+            'subject_id' => $document->id,
+            'action' => 'deletion.rejected',
+            'details' => [
+                'deletion_request_id' => $deletionRequest->id,
+            ],
+        ]);
+
+        return $deletionRequest->fresh(['document', 'requester', 'approver']);
     }
 }

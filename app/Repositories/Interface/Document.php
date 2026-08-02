@@ -4,9 +4,11 @@ namespace App\Repositories\Interface;
 
 use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
+use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\AccessLog;
 use App\Models\ChangeHistory;
+use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
 use App\Models\User;
@@ -68,4 +70,19 @@ interface Document
      * Record an access log entry when the document PDF is served.
      */
     public function logAccess(DocumentModel $document, User $user, string $action): AccessLog;
+
+    /**
+     * File a deletion request for a document, hiding it from search while pending.
+     */
+    public function requestDeletion(DocumentModel $document, RequestDeletionData $data): DeletionRequest;
+
+    /**
+     * Approve a pending deletion request, soft-deleting the document.
+     */
+    public function approveDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest;
+
+    /**
+     * Reject a pending deletion request, restoring the document to search.
+     */
+    public function rejectDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest;
 }

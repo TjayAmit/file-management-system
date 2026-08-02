@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
+use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
+use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
 use App\Models\User;
@@ -108,5 +110,29 @@ class DocumentService
         return $disk->response($version->path, $version->original_name, [
             'Content-Type' => $version->mime_type,
         ]);
+    }
+
+    /**
+     * File a deletion request for a document, hiding it from search while pending.
+     */
+    public function requestDeletion(DocumentModel $document, RequestDeletionData $data): DeletionRequest
+    {
+        return $this->documentRepository->requestDeletion($document, $data);
+    }
+
+    /**
+     * Approve a pending deletion request, soft-deleting the document.
+     */
+    public function approveDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest
+    {
+        return $this->documentRepository->approveDeletion($deletionRequest, $user);
+    }
+
+    /**
+     * Reject a pending deletion request, restoring the document to search.
+     */
+    public function rejectDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest
+    {
+        return $this->documentRepository->rejectDeletion($deletionRequest, $user);
     }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\StorageLocationController as WebAdminStorageLocat
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\DeletionRequestController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\RequestTypeController;
 use App\Http\Controllers\SearchController;
@@ -46,10 +47,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/documents/{reference}/revert/{changeHistory}', [DocumentController::class, 'revert'])->name('documents.revert');
         Route::post('/documents/{reference}/replace-file', [DocumentController::class, 'replaceFile'])->name('documents.replace-file');
         Route::post('/documents/{reference}/revert-file/{version}', [DocumentController::class, 'revertFileVersion'])->name('documents.revert-file');
+        Route::post('/documents/{reference}/deletion-requests', [DocumentController::class, 'requestDeletion'])->name('documents.deletion-requests.store');
     });
 
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/search/report', [SearchController::class, 'report'])->name('search.report');
+
+        Route::post('/deletion-requests/{deletionRequest}/approve', [DeletionRequestController::class, 'approve'])->name('deletion-requests.approve');
+        Route::post('/deletion-requests/{deletionRequest}/reject', [DeletionRequestController::class, 'reject'])->name('deletion-requests.reject');
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
