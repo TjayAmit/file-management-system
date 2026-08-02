@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DTOs\BulkSeedBusinessesData;
 use App\DTOs\CreateBusinessData;
 use App\DTOs\MergeBusinessData;
 use App\DTOs\UpdateBusinessData;
@@ -66,5 +67,16 @@ class BusinessService
     public function mergeBusinesses(MergeBusinessData $data, ?User $user = null): BusinessModel
     {
         return $this->businessRepository->merge($data, $user);
+    }
+
+    /**
+     * Bulk seed businesses (and optionally their branches) from a pre-launch
+     * or pilot-encoding list (PLAN.md §4.3, §6.2).
+     *
+     * @return array{businesses_created: int, businesses_existing: int, branches_created: int, branches_existing: int}
+     */
+    public function bulkSeed(BulkSeedBusinessesData $data, ?User $user = null): array
+    {
+        return $this->businessRepository->bulkSeed($data, $user);
     }
 }
