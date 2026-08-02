@@ -12,6 +12,8 @@ use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
 use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -150,5 +152,23 @@ class DocumentService
     public function purgeExpiredDocuments(int $retentionDays = 90): int
     {
         return $this->documentRepository->purgeExpiredDocuments($retentionDays);
+    }
+
+    /**
+     * Generate a printable QR code (SVG) encoding the document's opaque reference.
+     *
+     * The QR encodes the bare reference token only — never a URL or the
+     * internal integer id — so scanning it discloses nothing without the
+     * authenticated app (PLAN.md §3.4, §6.9).
+     */
+    public function generateQrCodeSvg(DocumentModel $document): string
+    {
+        $result = (new Builder(writer: new SvgWriter))->build(
+            data: $document->reference,
+            size: 300,
+            margin: 10,
+        );
+
+        return $result->getString();
     }
 }
