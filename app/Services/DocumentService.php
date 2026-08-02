@@ -135,4 +135,20 @@ class DocumentService
     {
         return $this->documentRepository->rejectDeletion($deletionRequest, $user);
     }
+
+    /**
+     * Purge superseded document versions older than the retention window.
+     */
+    public function purgeExpiredVersions(int $retentionDays = 90): int
+    {
+        return $this->documentRepository->purgeExpiredVersions($retentionDays);
+    }
+
+    /**
+     * Purge soft-deleted documents older than the retention window.
+     */
+    public function purgeExpiredDocuments(int $retentionDays = 90): int
+    {
+        return $this->documentRepository->purgeExpiredDocuments($retentionDays);
+    }
 }
