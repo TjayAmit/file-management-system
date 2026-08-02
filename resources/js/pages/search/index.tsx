@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
@@ -64,6 +64,9 @@ export default function SearchIndex({
     locationSearchLogId: number | null;
     filters: Filters;
 }) {
+    const { auth } = usePage().props;
+    const canUpload =
+        auth.user?.role === 'editor' || auth.user?.role === 'admin';
     const [location, setLocation] = useState(filters.location);
 
     function handleLocationSearch(e: FormEvent) {
@@ -86,6 +89,19 @@ export default function SearchIndex({
                         <p className="font-medium">
                             {stateMessages[result.state]}
                         </p>
+                        {result.state !== 'found' && canUpload && (
+                            <Link
+                                href={documents.create.url({
+                                    query:
+                                        filters.branch_id !== null
+                                            ? { branch_id: filters.branch_id }
+                                            : undefined,
+                                })}
+                                className="mt-2 inline-block rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent"
+                            >
+                                Scan it in — upload the document
+                            </Link>
+                        )}
                         {result.state === 'found' && (
                             <ul className="mt-2 divide-y">
                                 {result.documents.map((doc) => (
@@ -154,10 +170,26 @@ export default function SearchIndex({
                                         </span>
                                     </div>
                                     {branch.documents.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground">
-                                            Nothing encoded yet — go to the room
-                                            or storage building.
-                                        </p>
+                                        <div className="text-sm text-muted-foreground">
+                                            <p>
+                                                Nothing encoded yet — go to the
+                                                room or storage building.
+                                            </p>
+                                            {canUpload && (
+                                                <Link
+                                                    href={documents.create.url({
+                                                        query: {
+                                                            branch_id:
+                                                                branch.id,
+                                                        },
+                                                    })}
+                                                    className="mt-1 inline-block rounded-md border px-2 py-1 font-medium hover:bg-accent"
+                                                >
+                                                    Scan it in — upload the
+                                                    document
+                                                </Link>
+                                            )}
+                                        </div>
                                     ) : (
                                         <ul className="mt-1 divide-y">
                                             {branch.documents.map((doc) => (

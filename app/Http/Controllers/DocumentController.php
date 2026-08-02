@@ -8,8 +8,11 @@ use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
 use App\Models\DocumentVersion;
+use App\Services\BranchService;
 use App\Services\DocumentService;
+use App\Services\RequestTypeService;
 use App\Services\SearchService;
+use App\Services\StorageLocationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -22,6 +25,9 @@ class DocumentController extends Controller
     public function __construct(
         private readonly DocumentService $documentService,
         private readonly SearchService $searchService,
+        private readonly BranchService $branchService,
+        private readonly RequestTypeService $requestTypeService,
+        private readonly StorageLocationService $storageLocationService,
     ) {}
 
     /**
@@ -57,6 +63,28 @@ class DocumentController extends Controller
 
         return Inertia::render('documents/show', [
             'document' => $document,
+        ]);
+    }
+
+    /**
+     * Show the form for encoding a document not yet in the system.
+     *
+     * Reached from a failed search (PLAN.md §6.3): the upload sits on the
+     * critical path to printing the client's copy, so it must precede it.
+     */
+    public function create(Request $request): InertiaResponse
+    {
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+
+        return Inertia::render('documents/create', [
+            'branches' => $this->branchService->getAllBranches(),
+            'requestTypes' => $this->requestTypeService->getAllRequestTypes(),
+            'storageLocations' => $this->storageLocationService->getAllStorageLocations(),
+            'filters' => [
+                'branch_id' => isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
+            ],
         ]);
     }
 
