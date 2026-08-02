@@ -32,6 +32,14 @@ interface Document
     public function findByReference(string $reference): ?DocumentModel;
 
     /**
+     * Search documents narrowed by business, then optionally branch and request type.
+     * Sorted by the operative date (approval date, falling back to request date).
+     *
+     * @return Collection<int, DocumentModel>
+     */
+    public function search(int $businessId, ?int $branchId, ?int $requestTypeId): Collection;
+
+    /**
      * Create a new document with uploaded PDF version #1.
      */
     public function create(CreateDocumentData $data): DocumentModel;

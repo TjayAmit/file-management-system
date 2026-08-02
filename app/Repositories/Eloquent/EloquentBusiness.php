@@ -49,6 +49,14 @@ class EloquentBusiness implements BusinessRepositoryInterface
     }
 
     /**
+     * Find a business by its exact, controlled-vocabulary name.
+     */
+    public function findByExactName(string $name): ?BusinessModel
+    {
+        return BusinessModel::where('name', $name)->with('branches')->first();
+    }
+
+    /**
      * Create a new business.
      */
     public function create(CreateBusinessData $data): BusinessModel

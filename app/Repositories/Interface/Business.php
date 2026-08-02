@@ -31,6 +31,11 @@ interface Business
     public function findById(int $id): ?BusinessModel;
 
     /**
+     * Find a business by its exact, controlled-vocabulary name.
+     */
+    public function findByExactName(string $name): ?BusinessModel;
+
+    /**
      * Create a new business.
      */
     public function create(CreateBusinessData $data): BusinessModel;

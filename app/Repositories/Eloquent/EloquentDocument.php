@@ -47,6 +47,26 @@ class EloquentDocument implements DocumentRepositoryInterface
     }
 
     /**
+     * Search documents narrowed by business, then optionally branch and request type.
+     * Sorted by the operative date (approval date, falling back to request date).
+     *
+     * @return Collection<int, DocumentModel>
+     */
+    public function search(int $businessId, ?int $branchId, ?int $requestTypeId): Collection
+    {
+        return DocumentModel::query()
+            ->whereHas('branch', function ($query) use ($businessId) {
+                $query->where('business_id', $businessId);
+            })
+            ->when($branchId, fn ($query) => $query->where('branch_id', $branchId))
+            ->when($requestTypeId, fn ($query) => $query->where('request_type_id', $requestTypeId))
+            ->where('is_hidden', false)
+            ->with(['branch.business', 'requestType', 'storageLocation', 'currentVersion'])
+            ->orderByRaw('COALESCE(approval_date, request_date) DESC')
+            ->get();
+    }
+
+    /**
      * Create a new document with uploaded PDF version #1.
      */
     public function create(CreateDocumentData $data): DocumentModel
