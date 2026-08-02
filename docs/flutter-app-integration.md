@@ -37,3 +37,21 @@ Per PLAN.md §6.9. Nothing needs to be built here — the backend endpoint this 
 3. On success, show a record screen with: business name, branch, request type, document date, and current location (from `storageLocation`) so the editor can confirm it's the right paper before proceeding.
 4. On 404, show a clear "document not found" state so the user can rescan.
 5. Reuse the existing network-gate/timeout error handling from the login flow (#27) for off-network or unreachable-server cases during a scan.
+
+## Update location + batch transfer (Issue #29)
+
+Per PLAN.md §6.9. Nothing needs to be built here — both backend endpoints already exist (`app/Http/Controllers/Api/V1/DocumentController.php@updateLocation`, `app/Http/Controllers/Api/V1/TransferController.php@store`). This is the integration reference for the Flutter project's own session.
+
+**What already exists on the backend**
+
+- `PATCH /api/v1/documents/{reference}/location` — single-document update. Body: `{ to_storage_location_id, note? }`. Requires `Authorization: Bearer <token>` + `role:editor,admin`. Returns `{ success: true, message, data: <updated document> }` (200), or 404 if the reference doesn't resolve. Internally this is a batch-of-one transfer.
+- `POST /api/v1/transfers` — batch update. Body: `{ references: string[], to_storage_location_id, note? }`. Same auth/role requirement. Returns `{ success: true, message, data: <transfer> }` (201). Every reference must already exist (`exists:documents,reference`) or validation fails for the whole batch.
+- Every transfer (single or batch) is logged server-side as a change/activity — no client-side logging needed.
+
+**What the Flutter project needs to do**
+
+1. Single-document flow: after resolving a scanned document (#28), let the editor pick a target storage location and optional note, then call `PATCH /api/v1/documents/{reference}/location`.
+2. Batch flow: let the editor scan multiple documents in sequence, collecting references into a list (dedupe as scanned), then pick one target location + optional note for the whole batch, and call `POST /api/v1/transfers` with all collected `references` at once.
+3. On success, show a confirmation reflecting the new location for each affected document (single: the returned document; batch: refresh/refetch or trust the batch response).
+4. On validation failure (e.g. an unknown reference in the batch), surface which reference(s) failed so the editor can rescan or drop them — the whole batch is rejected together.
+5. Reuse the existing bearer-token auth and network-gate/timeout error handling from #27/#28 for these calls.
