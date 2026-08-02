@@ -36,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');
         Route::patch('/businesses/{business}', [BusinessController::class, 'update'])->name('businesses.update');
         Route::post('/businesses/merge', [BusinessController::class, 'merge'])->name('businesses.merge');
+        Route::post('/businesses/bulk-seed', [BusinessController::class, 'bulkSeed'])->name('businesses.bulk-seed');
 
         Route::post('/branches', [BranchController::class, 'store'])->name('branches.store');
         Route::patch('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');

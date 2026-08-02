@@ -2,14 +2,17 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\DTOs\BulkSeedBusinessesData;
 use App\DTOs\CreateBusinessData;
 use App\DTOs\MergeBusinessData;
 use App\DTOs\UpdateBusinessData;
 use App\Models\Activity;
+use App\Models\Branch as BranchModel;
 use App\Models\Business as BusinessModel;
 use App\Models\User;
 use App\Repositories\Interface\Business as BusinessRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class EloquentBusiness implements BusinessRepositoryInterface
 {
@@ -139,5 +142,82 @@ class EloquentBusiness implements BusinessRepositoryInterface
         ]);
 
         return $target;
+    }
+
+    /**
+     * Bulk seed businesses (and optionally their branches). Each row is
+     * matched by its exact name/location before creating, so re-running the
+     * same list is safe.
+     */
+    public function bulkSeed(BulkSeedBusinessesData $data, ?User $user = null): array
+    {
+        return DB::transaction(function () use ($data, $user) {
+            $summary = [
+                'businesses_created' => 0,
+                'businesses_existing' => 0,
+                'branches_created' => 0,
+                'branches_existing' => 0,
+            ];
+
+            foreach ($data->rows as $row) {
+                $name = trim($row['name']);
+
+                if ($name === '') {
+                    continue;
+                }
+
+                $business = BusinessModel::where('name', $name)->first();
+
+                if ($business === null) {
+                    $business = BusinessModel::create(['name' => $name]);
+
+                    Activity::create([
+                        'user_id' => $user?->id,
+                        'subject_type' => BusinessModel::class,
+                        'subject_id' => $business->id,
+                        'action' => 'business.seeded',
+                        'details' => ['name' => $business->name],
+                    ]);
+
+                    $summary['businesses_created']++;
+                } else {
+                    $summary['businesses_existing']++;
+                }
+
+                $location = isset($row['branch']) ? trim((string) $row['branch']) : '';
+
+                if ($location === '') {
+                    continue;
+                }
+
+                $branch = BranchModel::where('business_id', $business->id)
+                    ->where('location', $location)
+                    ->first();
+
+                if ($branch === null) {
+                    $branch = BranchModel::create([
+                        'business_id' => $business->id,
+                        'location' => $location,
+                    ]);
+
+                    Activity::create([
+                        'user_id' => $user?->id,
+                        'subject_type' => BranchModel::class,
+                        'subject_id' => $branch->id,
+                        'action' => 'branch.seeded',
+                        'details' => [
+                            'business_id' => $business->id,
+                            'location' => $branch->location,
+                        ],
+                    ]);
+
+                    $summary['branches_created']++;
+                } else {
+                    $summary['branches_existing']++;
+                }
+            }
+
+            return $summary;
+        });
     }
 }

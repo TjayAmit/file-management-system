@@ -82,3 +82,58 @@ test('a business may exist with zero branches', function () {
     expect($business->branches)->toHaveCount(0);
     $this->assertDatabaseHas('businesses', ['name' => 'Dormant Enterprise']);
 });
+
+test('editor and admin can bulk seed businesses and branches but viewer is denied', function () {
+    $viewer = User::factory()->viewer()->create();
+    $editor = User::factory()->editor()->create();
+
+    $this->actingAs($viewer)
+        ->post(route('businesses.bulk-seed'), [
+            'rows' => [['name' => 'Seed Corp', 'branch' => null]],
+        ])
+        ->assertStatus(403);
+
+    $response = $this->actingAs($editor)
+        ->post(route('businesses.bulk-seed'), [
+            'rows' => [
+                ['name' => 'Seed Corp', 'branch' => 'Main St'],
+                ['name' => 'Pilot Business', 'branch' => null],
+            ],
+        ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('businesses', ['name' => 'Seed Corp']);
+    $this->assertDatabaseHas('businesses', ['name' => 'Pilot Business']);
+
+    $business = Business::where('name', 'Seed Corp')->first();
+    $this->assertDatabaseHas('branches', ['business_id' => $business->id, 'location' => 'Main St']);
+
+    // "known business, nothing encoded" resolves for a seeded-but-unencoded business
+    $pilot = Business::where('name', 'Pilot Business')->first();
+    expect($pilot->branches)->toHaveCount(0);
+
+    $this->assertDatabaseHas('activities', [
+        'subject_type' => Business::class,
+        'subject_id' => $business->id,
+        'action' => 'business.seeded',
+    ]);
+});
+
+test('bulk seeding is idempotent — re-running the same rows does not duplicate businesses or branches', function () {
+    $editor = User::factory()->editor()->create();
+
+    $rows = [
+        'rows' => [
+            ['name' => 'Repeat Corp', 'branch' => 'Rizal St'],
+        ],
+    ];
+
+    $this->actingAs($editor)->post(route('businesses.bulk-seed'), $rows)->assertRedirect();
+    $this->actingAs($editor)->post(route('businesses.bulk-seed'), $rows)->assertRedirect();
+
+    expect(Business::where('name', 'Repeat Corp')->count())->toBe(1);
+
+    $business = Business::where('name', 'Repeat Corp')->first();
+    expect($business->branches()->where('location', 'Rizal St')->count())->toBe(1);
+});

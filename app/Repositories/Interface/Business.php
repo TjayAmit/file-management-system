@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Interface;
 
+use App\DTOs\BulkSeedBusinessesData;
 use App\DTOs\CreateBusinessData;
 use App\DTOs\MergeBusinessData;
 use App\DTOs\UpdateBusinessData;
@@ -49,4 +50,14 @@ interface Business
      * Merge source business into target business.
      */
     public function merge(MergeBusinessData $data, ?User $user = null): BusinessModel;
+
+    /**
+     * Bulk seed businesses (and optionally their branches) from a pre-launch
+     * or pilot-encoding list (PLAN.md §4.3, §6.2). Idempotent per row: a
+     * business/branch already known by its exact name is left untouched,
+     * not duplicated.
+     *
+     * @return array{businesses_created: int, businesses_existing: int, branches_created: int, branches_existing: int}
+     */
+    public function bulkSeed(BulkSeedBusinessesData $data, ?User $user = null): array;
 }
