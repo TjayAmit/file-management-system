@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\CreateDocumentData;
+use App\DTOs\CreateTransferData;
 use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Http\Controllers\Controller;
 use App\Models\ChangeHistory;
 use App\Models\DocumentVersion;
 use App\Services\DocumentService;
+use App\Services\TransferService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class DocumentController extends Controller
 
     public function __construct(
         private readonly DocumentService $documentService,
+        private readonly TransferService $transferService,
     ) {}
 
     /**
@@ -119,6 +122,38 @@ class DocumentController extends Controller
         $updatedDocument = $this->documentService->updateDocument($document, $data);
 
         return $this->successResponse($updatedDocument, 'Document metadata updated successfully');
+    }
+
+    /**
+     * Update the document's physical location, sharing the same transfer
+     * model as a batch transfer (PLAN.md §6.9) — a single-document transfer
+     * is a batch of one.
+     */
+    public function updateLocation(Request $request, string $reference): JsonResponse
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            return $this->errorResponse('Document not found', 404);
+        }
+
+        $validated = $request->validate([
+            'to_storage_location_id' => ['required', 'integer', 'exists:storage_locations,id'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $data = new CreateTransferData(
+            references: [$reference],
+            toStorageLocationId: (int) $validated['to_storage_location_id'],
+            note: isset($validated['note']) ? (string) $validated['note'] : null,
+            performedBy: $request->user(),
+        );
+
+        $this->transferService->createTransfer($data);
+
+        $updatedDocument = $this->documentService->getDocumentByReference($reference);
+
+        return $this->successResponse($updatedDocument, 'Document location updated successfully');
     }
 
     /**
