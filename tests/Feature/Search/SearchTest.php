@@ -158,6 +158,108 @@ test('results are sorted by the operative date, falling back to request date whe
     );
 });
 
+test('address-first query returns the right branch with its business and documents', function () {
+    $user = User::factory()->viewer()->create();
+
+    $business = Business::factory()->create(['name' => 'ABC Corp']);
+    $branch = Branch::factory()->create(['business_id' => $business->id, 'location' => 'Rizal St']);
+    $requestType = RequestType::factory()->create();
+    $document = Document::factory()->create([
+        'branch_id' => $branch->id,
+        'request_type_id' => $requestType->id,
+    ]);
+
+    Branch::factory()->create(['location' => 'Main St']);
+
+    $response = $this->actingAs($user)
+        ->get(route('search.index', ['location' => 'Rizal']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('locationResults', 1)
+        ->where('locationResults.0.id', $branch->id)
+        ->where('locationResults.0.location', 'Rizal St')
+        ->where('locationResults.0.business.id', $business->id)
+        ->has('locationResults.0.documents', 1)
+        ->where('locationResults.0.documents.0.id', $document->id)
+    );
+});
+
+test('address-first query matches multiple branches sharing part of an address', function () {
+    $user = User::factory()->viewer()->create();
+
+    $branchA = Branch::factory()->create(['location' => 'Rizal St corner Main']);
+    $branchB = Branch::factory()->create(['location' => 'Rizal Avenue']);
+    Branch::factory()->create(['location' => 'Bonifacio St']);
+
+    $response = $this->actingAs($user)
+        ->get(route('search.index', ['location' => 'Rizal']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('locationResults', 2)
+        ->where('locationResults.0.id', $branchA->id)
+        ->where('locationResults.1.id', $branchB->id)
+    );
+});
+
+test('address-first query with a known branch but nothing encoded reports it as such', function () {
+    $user = User::factory()->viewer()->create();
+
+    $branch = Branch::factory()->create(['location' => 'Rizal St']);
+
+    $response = $this->actingAs($user)
+        ->get(route('search.index', ['location' => 'Rizal']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('locationResults', 1)
+        ->where('locationResults.0.id', $branch->id)
+        ->has('locationResults.0.documents', 0)
+    );
+});
+
+test('address-first query returns an empty list, never a denial, when no branch matches', function () {
+    $user = User::factory()->viewer()->create();
+
+    $response = $this->actingAs($user)
+        ->get(route('search.index', ['location' => 'Nonexistent Ave']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('locationResults', 0));
+});
+
+test('address-first query excludes hidden documents pending deletion', function () {
+    $user = User::factory()->viewer()->create();
+
+    $branch = Branch::factory()->create(['location' => 'Rizal St']);
+    $requestType = RequestType::factory()->create();
+    Document::factory()->create([
+        'branch_id' => $branch->id,
+        'request_type_id' => $requestType->id,
+        'is_hidden' => true,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('search.index', ['location' => 'Rizal']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('locationResults', 1)
+        ->has('locationResults.0.documents', 0)
+    );
+});
+
+test('no location search is performed when the location query is blank', function () {
+    $user = User::factory()->viewer()->create();
+
+    $response = $this->actingAs($user)
+        ->get(route('search.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->where('locationResults', null));
+});
+
 test('hidden documents pending deletion are excluded from search results', function () {
     $user = User::factory()->viewer()->create();
 
