@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\DTOs\SearchDocumentsData;
 use App\Services\SearchService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -68,6 +69,8 @@ class SearchController extends Controller
      */
     public function report(): InertiaResponse
     {
+        Gate::authorize('view-search-report');
+
         return Inertia::render('search/report', [
             'report' => $this->searchService->hitRateReport(),
         ]);

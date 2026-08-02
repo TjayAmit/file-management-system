@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\CreateTransferData;
+use App\Models\Transfer;
 use App\Services\TransferService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,8 @@ class TransferController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Transfer::class);
+
         $validated = $request->validate([
             'references' => ['required', 'array', 'min:1'],
             'references.*' => ['string', 'exists:documents,reference'],

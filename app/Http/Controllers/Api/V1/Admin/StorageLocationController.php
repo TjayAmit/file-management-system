@@ -24,6 +24,8 @@ class StorageLocationController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', StorageLocation::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -42,6 +44,8 @@ class StorageLocationController extends Controller
      */
     public function update(Request $request, StorageLocation $storageLocation): JsonResponse
     {
+        $this->authorize('update', $storageLocation);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);

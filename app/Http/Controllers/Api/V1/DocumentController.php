@@ -8,6 +8,7 @@ use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Http\Controllers\Controller;
 use App\Models\ChangeHistory;
+use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Services\DocumentService;
 use App\Services\TransferService;
@@ -54,6 +55,8 @@ class DocumentController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Document::class);
+
         $validated = $request->validate([
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'request_type_id' => ['required', 'integer', 'exists:request_types,id'],
@@ -98,6 +101,8 @@ class DocumentController extends Controller
             return $this->errorResponse('Document not found', 404);
         }
 
+        $this->authorize('update', $document);
+
         $validated = $request->validate([
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
@@ -137,6 +142,8 @@ class DocumentController extends Controller
             return $this->errorResponse('Document not found', 404);
         }
 
+        $this->authorize('updateLocation', $document);
+
         $validated = $request->validate([
             'to_storage_location_id' => ['required', 'integer', 'exists:storage_locations,id'],
             'note' => ['nullable', 'string', 'max:1000'],
@@ -167,6 +174,8 @@ class DocumentController extends Controller
             return $this->errorResponse('Document not found', 404);
         }
 
+        $this->authorize('revert', $document);
+
         $revertedDocument = $this->documentService->revertDocument($document, $changeHistory, $request->user());
 
         return $this->successResponse($revertedDocument, 'Document metadata reverted successfully');
@@ -182,6 +191,8 @@ class DocumentController extends Controller
         if (! $document) {
             return $this->errorResponse('Document not found', 404);
         }
+
+        $this->authorize('replaceFile', $document);
 
         $request->validate([
             'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
@@ -210,6 +221,8 @@ class DocumentController extends Controller
         if (! $document) {
             return $this->errorResponse('Document not found', 404);
         }
+
+        $this->authorize('revertFileVersion', $document);
 
         $updatedDocument = $this->documentService->revertDocumentFileVersion($document, $version, $request->user());
 

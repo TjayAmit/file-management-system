@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\CreateTransferData;
 use App\Http\Controllers\Controller;
+use App\Models\Transfer;
 use App\Services\TransferService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,8 @@ class TransferController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Transfer::class);
+
         $validated = $request->validate([
             'references' => ['required', 'array', 'min:1'],
             'references.*' => ['string', 'exists:documents,reference'],

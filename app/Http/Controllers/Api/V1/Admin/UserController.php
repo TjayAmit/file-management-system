@@ -25,6 +25,8 @@ class UserController extends Controller
      */
     public function index(): JsonResponse
     {
+        $this->authorize('viewAny', User::class);
+
         $users = $this->userService->getAllUsers();
 
         return $this->successResponse($users, 'Users retrieved successfully');
@@ -35,6 +37,8 @@ class UserController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', User::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
@@ -59,6 +63,8 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): JsonResponse
     {
+        $this->authorize('update', $user);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -83,6 +89,8 @@ class UserController extends Controller
      */
     public function deactivate(User $user): JsonResponse
     {
+        $this->authorize('deactivate', $user);
+
         $deactivatedUser = $this->userService->deactivateUser($user);
 
         return $this->successResponse($deactivatedUser, 'User deactivated successfully');
@@ -93,6 +101,8 @@ class UserController extends Controller
      */
     public function resetPassword(Request $request, User $user): JsonResponse
     {
+        $this->authorize('resetPassword', $user);
+
         $validated = $request->validate([
             'password' => ['required', 'string', 'min:8'],
         ]);

@@ -23,6 +23,8 @@ class RequestTypeController extends Controller
      */
     public function index(Request $request): InertiaResponse
     {
+        $this->authorize('viewAny', RequestType::class);
+
         $query = (string) $request->query('query', '');
         $requestTypes = $this->requestTypeService->searchRequestTypes($query);
 
@@ -39,6 +41,8 @@ class RequestTypeController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', RequestType::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -57,6 +61,8 @@ class RequestTypeController extends Controller
      */
     public function update(Request $request, RequestType $requestType): RedirectResponse
     {
+        $this->authorize('update', $requestType);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -75,6 +81,8 @@ class RequestTypeController extends Controller
      */
     public function merge(Request $request): RedirectResponse
     {
+        $this->authorize('merge', RequestType::class);
+
         $validated = $request->validate([
             'source_request_type_id' => ['required', 'integer', 'exists:request_types,id'],
             'target_request_type_id' => ['required', 'integer', 'exists:request_types,id', 'different:source_request_type_id'],
