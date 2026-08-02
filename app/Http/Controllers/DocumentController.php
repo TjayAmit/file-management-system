@@ -8,6 +8,7 @@ use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
 use App\Models\DocumentVersion;
 use App\Services\DocumentService;
+use App\Services\SearchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -19,6 +20,7 @@ class DocumentController extends Controller
 {
     public function __construct(
         private readonly DocumentService $documentService,
+        private readonly SearchService $searchService,
     ) {}
 
     /**
@@ -36,12 +38,20 @@ class DocumentController extends Controller
     /**
      * Display the specified document.
      */
-    public function show(string $reference): InertiaResponse
+    public function show(Request $request, string $reference): InertiaResponse
     {
         $document = $this->documentService->getDocumentByReference($reference);
 
         if (! $document) {
             abort(404, 'Document not found');
+        }
+
+        $validated = $request->validate([
+            'search_log' => ['nullable', 'integer'],
+        ]);
+
+        if (isset($validated['search_log'])) {
+            $this->searchService->recordOpenedDocument((int) $validated['search_log'], $document->id);
         }
 
         return Inertia::render('documents/show', [

@@ -20,6 +20,7 @@ final readonly class SearchResultData implements JsonSerializable
         public SearchState $state,
         public ?BusinessModel $business,
         public Collection $documents,
+        public ?int $searchLogId = null,
     ) {}
 
     /**
@@ -31,6 +32,7 @@ final readonly class SearchResultData implements JsonSerializable
             'state' => $this->state->value,
             'business' => $this->business,
             'documents' => $this->documents->values(),
+            'search_log_id' => $this->searchLogId,
         ];
     }
 }

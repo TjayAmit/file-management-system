@@ -1,7 +1,8 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import documents from '@/routes/documents';
 import search from '@/routes/search';
 
 interface DocumentItem {
@@ -28,6 +29,7 @@ interface SearchResult {
     state: SearchState;
     business: BusinessItem | null;
     documents: DocumentItem[];
+    search_log_id: number | null;
 }
 
 interface Filters {
@@ -36,6 +38,12 @@ interface Filters {
     branch_id: number | null;
     request_type_id: number | null;
     location: string;
+}
+
+function documentLinkUrl(reference: string, searchLogId: number | null) {
+    return documents.show.url(reference, {
+        query: searchLogId !== null ? { search_log: searchLogId } : undefined,
+    });
 }
 
 const stateMessages: Record<SearchState, string> = {
@@ -48,10 +56,12 @@ const stateMessages: Record<SearchState, string> = {
 export default function SearchIndex({
     result,
     locationResults,
+    locationSearchLogId,
     filters,
 }: {
     result: SearchResult | null;
     locationResults: BranchItem[] | null;
+    locationSearchLogId: number | null;
     filters: Filters;
 }) {
     const [location, setLocation] = useState(filters.location);
@@ -79,14 +89,19 @@ export default function SearchIndex({
                         {result.state === 'found' && (
                             <ul className="mt-2 divide-y">
                                 {result.documents.map((doc) => (
-                                    <li
-                                        key={doc.id}
-                                        className="flex justify-between py-2"
-                                    >
-                                        <span>{doc.title}</span>
-                                        <span className="font-mono text-sm text-muted-foreground">
-                                            {doc.reference}
-                                        </span>
+                                    <li key={doc.id} className="py-2">
+                                        <Link
+                                            href={documentLinkUrl(
+                                                doc.reference,
+                                                result.search_log_id,
+                                            )}
+                                            className="flex justify-between hover:underline"
+                                        >
+                                            <span>{doc.title}</span>
+                                            <span className="font-mono text-sm text-muted-foreground">
+                                                {doc.reference}
+                                            </span>
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>
@@ -148,12 +163,20 @@ export default function SearchIndex({
                                             {branch.documents.map((doc) => (
                                                 <li
                                                     key={doc.id}
-                                                    className="flex justify-between py-1"
+                                                    className="py-1"
                                                 >
-                                                    <span>{doc.title}</span>
-                                                    <span className="font-mono text-sm text-muted-foreground">
-                                                        {doc.reference}
-                                                    </span>
+                                                    <Link
+                                                        href={documentLinkUrl(
+                                                            doc.reference,
+                                                            locationSearchLogId,
+                                                        )}
+                                                        className="flex justify-between hover:underline"
+                                                    >
+                                                        <span>{doc.title}</span>
+                                                        <span className="font-mono text-sm text-muted-foreground">
+                                                            {doc.reference}
+                                                        </span>
+                                                    </Link>
                                                 </li>
                                             ))}
                                         </ul>

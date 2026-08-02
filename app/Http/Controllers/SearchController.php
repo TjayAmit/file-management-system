@@ -43,14 +43,15 @@ class SearchController extends Controller
                 requestTypeId: $requestTypeId,
             );
 
-            $result = $this->searchService->search($data);
+            $result = $this->searchService->search($data, $request->user());
         }
 
-        $locationResults = $location !== '' ? $this->searchService->searchByLocation($location) : null;
+        $locationSearch = $location !== '' ? $this->searchService->searchByLocation($location, $request->user()) : null;
 
         return Inertia::render('search/index', [
             'result' => $result,
-            'locationResults' => $locationResults,
+            'locationResults' => $locationSearch['branches'] ?? null,
+            'locationSearchLogId' => $locationSearch['searchLogId'] ?? null,
             'filters' => [
                 'business' => $businessQuery,
                 'business_id' => $businessId,
@@ -58,6 +59,17 @@ class SearchController extends Controller
                 'request_type_id' => $requestTypeId,
                 'location' => $location,
             ],
+        ]);
+    }
+
+    /**
+     * Simple hit-rate report for the office head (PLAN.md §5.3): progress
+     * toward the 60% target.
+     */
+    public function report(): InertiaResponse
+    {
+        return Inertia::render('search/report', [
+            'report' => $this->searchService->hitRateReport(),
         ]);
     }
 }

@@ -48,6 +48,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/documents/{reference}/revert-file/{version}', [DocumentController::class, 'revertFileVersion'])->name('documents.revert-file');
     });
 
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/search/report', [SearchController::class, 'report'])->name('search.report');
+    });
+
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [WebAdminUserController::class, 'index'])->name('users.index');
         Route::post('/users', [WebAdminUserController::class, 'store'])->name('users.store');
