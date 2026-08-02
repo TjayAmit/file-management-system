@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::get('/documents/create', [DocumentController::class, 'create'])->middleware('role:editor,admin')->name('documents.create');
     Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
     Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->name('documents.file');
 
