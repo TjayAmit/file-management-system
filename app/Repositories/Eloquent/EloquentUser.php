@@ -31,6 +31,14 @@ class EloquentUser implements UserRepositoryInterface
     }
 
     /**
+     * Find user by email.
+     */
+    public function findByEmail(string $email): ?UserModel
+    {
+        return UserModel::where('email', $email)->first();
+    }
+
+    /**
      * Create a new user.
      */
     public function create(CreateUserData $data, ?UserModel $actor = null): UserModel

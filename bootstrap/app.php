@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureRequestIsOnOfficeNetwork;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
@@ -19,6 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+
+        $middleware->prependToGroup('web', [
+            EnsureRequestIsOnOfficeNetwork::class,
+        ]);
+
+        $middleware->prependToGroup('api', [
+            EnsureRequestIsOnOfficeNetwork::class,
+        ]);
 
         $middleware->web(append: [
             HandleAppearance::class,
