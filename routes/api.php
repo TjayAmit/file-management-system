@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Admin\StorageLocationController as ApiAdminStorageLocationController;
 use App\Http\Controllers\Api\V1\Admin\UserController as ApiAdminUserController;
+use App\Http\Controllers\Api\V1\AuthController as ApiAuthController;
 use App\Http\Controllers\Api\V1\BranchController as ApiBranchController;
 use App\Http\Controllers\Api\V1\BusinessController as ApiBusinessController;
 use App\Http\Controllers\Api\V1\DocumentController as ApiDocumentController;
@@ -11,6 +12,8 @@ use App\Http\Controllers\Api\V1\SystemStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
+    Route::post('/auth/login', [ApiAuthController::class, 'login'])->name('api.v1.auth.login');
+
     Route::get('/status', SystemStatusController::class)->name('api.v1.status');
     Route::get('/businesses', [ApiBusinessController::class, 'index'])->name('api.v1.businesses.index');
     Route::get('/branches', [ApiBranchController::class, 'index'])->name('api.v1.branches.index');
