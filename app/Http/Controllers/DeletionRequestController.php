@@ -18,6 +18,8 @@ class DeletionRequestController extends Controller
      */
     public function approve(Request $request, DeletionRequest $deletionRequest): RedirectResponse
     {
+        $this->authorize('approve', $deletionRequest);
+
         $this->documentService->approveDeletion($deletionRequest, $request->user());
 
         return back()->with('status', 'Deletion request approved');
@@ -28,6 +30,8 @@ class DeletionRequestController extends Controller
      */
     public function reject(Request $request, DeletionRequest $deletionRequest): RedirectResponse
     {
+        $this->authorize('reject', $deletionRequest);
+
         $this->documentService->rejectDeletion($deletionRequest, $request->user());
 
         return back()->with('status', 'Deletion request rejected');

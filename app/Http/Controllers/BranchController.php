@@ -24,6 +24,8 @@ class BranchController extends Controller
      */
     public function index(Request $request): InertiaResponse
     {
+        $this->authorize('viewAny', Branch::class);
+
         $businessId = $request->query('business_id') !== null ? (int) $request->query('business_id') : null;
         $query = (string) $request->query('query', '');
 
@@ -43,6 +45,8 @@ class BranchController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Branch::class);
+
         $validated = $request->validate([
             'business_id' => ['required', 'integer', 'exists:businesses,id'],
             'location' => ['required', 'string', 'max:255'],
@@ -63,6 +67,8 @@ class BranchController extends Controller
      */
     public function update(Request $request, Branch $branch): RedirectResponse
     {
+        $this->authorize('update', $branch);
+
         $validated = $request->validate([
             'location' => ['required', 'string', 'max:255'],
         ]);
@@ -81,6 +87,8 @@ class BranchController extends Controller
      */
     public function reparent(Request $request, Branch $branch): RedirectResponse
     {
+        $this->authorize('reparent', $branch);
+
         $validated = $request->validate([
             'new_business_id' => ['required', 'integer', 'exists:businesses,id'],
         ]);
@@ -100,6 +108,8 @@ class BranchController extends Controller
      */
     public function merge(Request $request): RedirectResponse
     {
+        $this->authorize('merge', Branch::class);
+
         $validated = $request->validate([
             'source_branch_id' => ['required', 'integer', 'exists:branches,id'],
             'target_branch_id' => ['required', 'integer', 'exists:branches,id', 'different:source_branch_id'],

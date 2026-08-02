@@ -36,6 +36,8 @@ class RequestTypeController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', RequestType::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -54,6 +56,8 @@ class RequestTypeController extends Controller
      */
     public function update(Request $request, RequestType $requestType): JsonResponse
     {
+        $this->authorize('update', $requestType);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -72,6 +76,8 @@ class RequestTypeController extends Controller
      */
     public function merge(Request $request): JsonResponse
     {
+        $this->authorize('merge', RequestType::class);
+
         $validated = $request->validate([
             'source_request_type_id' => ['required', 'integer', 'exists:request_types,id'],
             'target_request_type_id' => ['required', 'integer', 'exists:request_types,id', 'different:source_request_type_id'],

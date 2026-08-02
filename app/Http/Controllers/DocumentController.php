@@ -7,6 +7,7 @@ use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\ChangeHistory;
+use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Services\BranchService;
 use App\Services\DocumentService;
@@ -36,6 +37,8 @@ class DocumentController extends Controller
      */
     public function index(): InertiaResponse
     {
+        $this->authorize('viewAny', Document::class);
+
         $documents = $this->documentService->getAllDocuments();
 
         return Inertia::render('documents/index', [
@@ -53,6 +56,8 @@ class DocumentController extends Controller
         if (! $document) {
             abort(404, 'Document not found');
         }
+
+        $this->authorize('view', $document);
 
         $validated = $request->validate([
             'search_log' => ['nullable', 'integer'],
@@ -76,6 +81,8 @@ class DocumentController extends Controller
      */
     public function create(Request $request): InertiaResponse
     {
+        $this->authorize('create', Document::class);
+
         $validated = $request->validate([
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ]);
@@ -95,6 +102,8 @@ class DocumentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Document::class);
+
         $validated = $request->validate([
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'request_type_id' => ['required', 'integer', 'exists:request_types,id'],
@@ -139,6 +148,8 @@ class DocumentController extends Controller
             abort(404, 'Document not found');
         }
 
+        $this->authorize('update', $document);
+
         $validated = $request->validate([
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
@@ -176,6 +187,8 @@ class DocumentController extends Controller
             abort(404, 'Document not found');
         }
 
+        $this->authorize('revert', $document);
+
         $this->documentService->revertDocument($document, $changeHistory, $request->user());
 
         return back()->with('status', 'Document metadata reverted successfully');
@@ -191,6 +204,8 @@ class DocumentController extends Controller
         if (! $document) {
             abort(404, 'Document not found');
         }
+
+        $this->authorize('replaceFile', $document);
 
         $request->validate([
             'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
@@ -220,6 +235,8 @@ class DocumentController extends Controller
             abort(404, 'Document not found');
         }
 
+        $this->authorize('revertFileVersion', $document);
+
         $this->documentService->revertDocumentFileVersion($document, $version, $request->user());
 
         return back()->with('status', 'Document file version reverted successfully');
@@ -235,6 +252,8 @@ class DocumentController extends Controller
         if (! $document) {
             abort(404, 'Document not found');
         }
+
+        $this->authorize('view', $document);
 
         $validated = $request->validate([
             'action' => ['required', 'string', 'in:view,download,print'],
@@ -254,6 +273,8 @@ class DocumentController extends Controller
             abort(404, 'Document not found');
         }
 
+        $this->authorize('view', $document);
+
         $svg = $this->documentService->generateQrCodeSvg($document);
 
         return response($svg, 200, ['Content-Type' => 'image/svg+xml']);
@@ -269,6 +290,8 @@ class DocumentController extends Controller
         if (! $document) {
             abort(404, 'Document not found');
         }
+
+        $this->authorize('requestDeletion', $document);
 
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:1000'],

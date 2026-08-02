@@ -36,6 +36,8 @@ class BusinessController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Business::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -54,6 +56,8 @@ class BusinessController extends Controller
      */
     public function update(Request $request, Business $business): JsonResponse
     {
+        $this->authorize('update', $business);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -72,6 +76,8 @@ class BusinessController extends Controller
      */
     public function merge(Request $request): JsonResponse
     {
+        $this->authorize('merge', Business::class);
+
         $validated = $request->validate([
             'source_id' => ['required', 'integer', 'exists:businesses,id'],
             'target_id' => ['required', 'integer', 'exists:businesses,id', 'different:source_id'],
