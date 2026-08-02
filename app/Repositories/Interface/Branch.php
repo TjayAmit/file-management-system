@@ -27,6 +27,14 @@ interface Branch
     public function search(?int $businessId = null, string $query = ''): Collection;
 
     /**
+     * Search branches by location/address for the address-first entry point
+     * (PLAN.md §3.2), with each branch's business and encoded documents loaded.
+     *
+     * @return Collection<int, BranchModel>
+     */
+    public function searchByLocation(string $location): Collection;
+
+    /**
      * Find a branch by ID.
      */
     public function findById(int $id): ?BranchModel;

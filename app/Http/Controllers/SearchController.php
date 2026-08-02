@@ -24,12 +24,14 @@ class SearchController extends Controller
             'business_id' => ['nullable', 'integer', 'exists:businesses,id'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
+            'location' => ['nullable', 'string', 'max:255'],
         ]);
 
         $businessQuery = (string) ($validated['business'] ?? '');
         $businessId = isset($validated['business_id']) ? (int) $validated['business_id'] : null;
         $branchId = isset($validated['branch_id']) ? (int) $validated['branch_id'] : null;
         $requestTypeId = isset($validated['request_type_id']) ? (int) $validated['request_type_id'] : null;
+        $location = trim((string) ($validated['location'] ?? ''));
 
         $result = null;
 
@@ -44,13 +46,17 @@ class SearchController extends Controller
             $result = $this->searchService->search($data);
         }
 
+        $locationResults = $location !== '' ? $this->searchService->searchByLocation($location) : null;
+
         return Inertia::render('search/index', [
             'result' => $result,
+            'locationResults' => $locationResults,
             'filters' => [
                 'business' => $businessQuery,
                 'business_id' => $businessId,
                 'branch_id' => $branchId,
                 'request_type_id' => $requestTypeId,
+                'location' => $location,
             ],
         ]);
     }

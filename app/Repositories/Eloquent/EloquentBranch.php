@@ -45,6 +45,32 @@ class EloquentBranch implements BranchRepositoryInterface
     }
 
     /**
+     * Search branches by location/address for the address-first entry point
+     * (PLAN.md §3.2), with each branch's business and encoded documents loaded.
+     *
+     * @return Collection<int, BranchModel>
+     */
+    public function searchByLocation(string $location): Collection
+    {
+        if (trim($location) === '') {
+            return new Collection;
+        }
+
+        return BranchModel::where('location', 'like', '%'.$location.'%')
+            ->with([
+                'business',
+                'documents' => function ($query) {
+                    $query->where('is_hidden', false)
+                        ->with(['requestType', 'storageLocation', 'currentVersion'])
+                        ->orderByRaw('COALESCE(approval_date, request_date) DESC');
+                },
+            ])
+            ->orderBy('id')
+            ->limit(15)
+            ->get();
+    }
+
+    /**
      * Find a branch by ID.
      */
     public function findById(int $id): ?BranchModel
