@@ -11,6 +11,7 @@ use App\Http\Controllers\RequestTypeController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StorageLocationController;
 use App\Http\Controllers\SystemStatusController;
+use App\Http\Controllers\TransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -51,6 +52,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/documents/{reference}/replace-file', [DocumentController::class, 'replaceFile'])->name('documents.replace-file');
         Route::post('/documents/{reference}/revert-file/{version}', [DocumentController::class, 'revertFileVersion'])->name('documents.revert-file');
         Route::post('/documents/{reference}/deletion-requests', [DocumentController::class, 'requestDeletion'])->name('documents.deletion-requests.store');
+
+        Route::post('/transfers', [TransferController::class, 'store'])->name('transfers.store');
     });
 
     Route::middleware(['role:admin'])->group(function () {

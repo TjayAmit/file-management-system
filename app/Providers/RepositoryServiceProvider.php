@@ -10,6 +10,7 @@ use App\Repositories\Eloquent\EloquentRequestType;
 use App\Repositories\Eloquent\EloquentSearchLog;
 use App\Repositories\Eloquent\EloquentStorageLocation;
 use App\Repositories\Eloquent\EloquentSystemStatus;
+use App\Repositories\Eloquent\EloquentTransfer;
 use App\Repositories\Eloquent\EloquentUser;
 use App\Repositories\Interface\Activity as ActivityRepositoryInterface;
 use App\Repositories\Interface\Branch as BranchRepositoryInterface;
@@ -19,6 +20,7 @@ use App\Repositories\Interface\RequestType as RequestTypeRepositoryInterface;
 use App\Repositories\Interface\SearchLog as SearchLogRepositoryInterface;
 use App\Repositories\Interface\StorageLocation as StorageLocationRepositoryInterface;
 use App\Repositories\Interface\SystemStatus;
+use App\Repositories\Interface\Transfer as TransferRepositoryInterface;
 use App\Repositories\Interface\User as UserRepositoryInterface;
 use Illuminate\Support\ServiceProvider;
 
@@ -38,6 +40,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(DocumentRepositoryInterface::class, EloquentDocument::class);
         $this->app->bind(SearchLogRepositoryInterface::class, EloquentSearchLog::class);
         $this->app->bind(ActivityRepositoryInterface::class, EloquentActivity::class);
+        $this->app->bind(TransferRepositoryInterface::class, EloquentTransfer::class);
     }
 
     /**
