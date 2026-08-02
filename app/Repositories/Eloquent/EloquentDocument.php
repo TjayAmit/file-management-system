@@ -12,9 +12,12 @@ use App\Models\ChangeHistory;
 use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
+use App\Models\SearchLog;
+use App\Models\TransferItem;
 use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -389,5 +392,51 @@ class EloquentDocument implements DocumentRepositoryInterface
         ]);
 
         return $deletionRequest->fresh(['document', 'requester', 'approver']);
+    }
+
+    /**
+     * Purge superseded document versions older than the retention window, removing their files from disk.
+     */
+    public function purgeExpiredVersions(int $retentionDays = 90): int
+    {
+        $versions = DocumentVersion::where('is_current', false)
+            ->where('created_at', '<', now()->subDays($retentionDays))
+            ->get();
+
+        $disk = Storage::disk('private');
+
+        foreach ($versions as $version) {
+            $disk->delete($version->path);
+            $version->delete();
+        }
+
+        return $versions->count();
+    }
+
+    /**
+     * Purge soft-deleted documents older than the retention window, removing their file versions from disk.
+     */
+    public function purgeExpiredDocuments(int $retentionDays = 90): int
+    {
+        $documents = DocumentModel::onlyTrashed()
+            ->where('deleted_at', '<', now()->subDays($retentionDays))
+            ->with('versions')
+            ->get();
+
+        $disk = Storage::disk('private');
+
+        foreach ($documents as $document) {
+            foreach ($document->versions as $version) {
+                $disk->delete($version->path);
+            }
+
+            AccessLog::where('document_id', $document->id)->delete();
+            SearchLog::where('opened_document_id', $document->id)->update(['opened_document_id' => null]);
+            TransferItem::where('document_id', $document->id)->delete();
+
+            $document->forceDelete();
+        }
+
+        return $documents->count();
     }
 }

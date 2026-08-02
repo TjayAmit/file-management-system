@@ -85,4 +85,14 @@ interface Document
      * Reject a pending deletion request, restoring the document to search.
      */
     public function rejectDeletion(DeletionRequest $deletionRequest, User $user): DeletionRequest;
+
+    /**
+     * Purge superseded document versions older than the retention window, removing their files from disk.
+     */
+    public function purgeExpiredVersions(int $retentionDays = 90): int;
+
+    /**
+     * Purge soft-deleted documents older than the retention window, removing their file versions from disk.
+     */
+    public function purgeExpiredDocuments(int $retentionDays = 90): int;
 }
