@@ -59,11 +59,21 @@ class EloquentBusiness implements BusinessRepositoryInterface
     /**
      * Create a new business.
      */
-    public function create(CreateBusinessData $data): BusinessModel
+    public function create(CreateBusinessData $data, ?User $user = null): BusinessModel
     {
         /** @var BusinessModel $business */
         $business = BusinessModel::create([
             'name' => $data->name,
+        ]);
+
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => BusinessModel::class,
+            'subject_id' => $business->id,
+            'action' => 'business.created',
+            'details' => [
+                'name' => $business->name,
+            ],
         ]);
 
         return $business;
@@ -72,10 +82,23 @@ class EloquentBusiness implements BusinessRepositoryInterface
     /**
      * Update an existing business.
      */
-    public function update(BusinessModel $business, UpdateBusinessData $data): BusinessModel
+    public function update(BusinessModel $business, UpdateBusinessData $data, ?User $user = null): BusinessModel
     {
+        $oldName = $business->name;
+
         $business->update([
             'name' => $data->name,
+        ]);
+
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => BusinessModel::class,
+            'subject_id' => $business->id,
+            'action' => 'business.updated',
+            'details' => [
+                'old_name' => $oldName,
+                'new_name' => $business->name,
+            ],
         ]);
 
         return $business;

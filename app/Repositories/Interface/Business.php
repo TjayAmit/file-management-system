@@ -38,12 +38,12 @@ interface Business
     /**
      * Create a new business.
      */
-    public function create(CreateBusinessData $data): BusinessModel;
+    public function create(CreateBusinessData $data, ?User $user = null): BusinessModel;
 
     /**
      * Update an existing business.
      */
-    public function update(BusinessModel $business, UpdateBusinessData $data): BusinessModel;
+    public function update(BusinessModel $business, UpdateBusinessData $data, ?User $user = null): BusinessModel;
 
     /**
      * Merge source business into target business.

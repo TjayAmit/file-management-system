@@ -81,12 +81,23 @@ class EloquentBranch implements BranchRepositoryInterface
     /**
      * Create a new branch.
      */
-    public function create(CreateBranchData $data): BranchModel
+    public function create(CreateBranchData $data, ?User $user = null): BranchModel
     {
         /** @var BranchModel $branch */
         $branch = BranchModel::create([
             'business_id' => $data->businessId,
             'location' => $data->location,
+        ]);
+
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => BranchModel::class,
+            'subject_id' => $branch->id,
+            'action' => 'branch.created',
+            'details' => [
+                'business_id' => $branch->business_id,
+                'location' => $branch->location,
+            ],
         ]);
 
         return $branch;
@@ -95,10 +106,23 @@ class EloquentBranch implements BranchRepositoryInterface
     /**
      * Update an existing branch.
      */
-    public function update(BranchModel $branch, UpdateBranchData $data): BranchModel
+    public function update(BranchModel $branch, UpdateBranchData $data, ?User $user = null): BranchModel
     {
+        $oldLocation = $branch->location;
+
         $branch->update([
             'location' => $data->location,
+        ]);
+
+        Activity::create([
+            'user_id' => $user?->id,
+            'subject_type' => BranchModel::class,
+            'subject_id' => $branch->id,
+            'action' => 'branch.updated',
+            'details' => [
+                'old_location' => $oldLocation,
+                'new_location' => $branch->location,
+            ],
         ]);
 
         return $branch;

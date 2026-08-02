@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Repositories\Eloquent\EloquentActivity;
 use App\Repositories\Eloquent\EloquentBranch;
 use App\Repositories\Eloquent\EloquentBusiness;
 use App\Repositories\Eloquent\EloquentDocument;
@@ -10,6 +11,7 @@ use App\Repositories\Eloquent\EloquentSearchLog;
 use App\Repositories\Eloquent\EloquentStorageLocation;
 use App\Repositories\Eloquent\EloquentSystemStatus;
 use App\Repositories\Eloquent\EloquentUser;
+use App\Repositories\Interface\Activity as ActivityRepositoryInterface;
 use App\Repositories\Interface\Branch as BranchRepositoryInterface;
 use App\Repositories\Interface\Business as BusinessRepositoryInterface;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
@@ -35,6 +37,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(StorageLocationRepositoryInterface::class, EloquentStorageLocation::class);
         $this->app->bind(DocumentRepositoryInterface::class, EloquentDocument::class);
         $this->app->bind(SearchLogRepositoryInterface::class, EloquentSearchLog::class);
+        $this->app->bind(ActivityRepositoryInterface::class, EloquentActivity::class);
     }
 
     /**

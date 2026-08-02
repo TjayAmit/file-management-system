@@ -48,17 +48,17 @@ class BranchService
     /**
      * Create a new branch.
      */
-    public function createBranch(CreateBranchData $data): BranchModel
+    public function createBranch(CreateBranchData $data, ?User $user = null): BranchModel
     {
-        return $this->branchRepository->create($data);
+        return $this->branchRepository->create($data, $user);
     }
 
     /**
      * Update an existing branch.
      */
-    public function updateBranch(BranchModel $branch, UpdateBranchData $data): BranchModel
+    public function updateBranch(BranchModel $branch, UpdateBranchData $data, ?User $user = null): BranchModel
     {
-        return $this->branchRepository->update($branch, $data);
+        return $this->branchRepository->update($branch, $data, $user);
     }
 
     /**

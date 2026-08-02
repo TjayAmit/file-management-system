@@ -42,12 +42,12 @@ interface Branch
     /**
      * Create a new branch.
      */
-    public function create(CreateBranchData $data): BranchModel;
+    public function create(CreateBranchData $data, ?User $user = null): BranchModel;
 
     /**
      * Update an existing branch.
      */
-    public function update(BranchModel $branch, UpdateBranchData $data): BranchModel;
+    public function update(BranchModel $branch, UpdateBranchData $data, ?User $user = null): BranchModel;
 
     /**
      * Re-parent a branch to another business.

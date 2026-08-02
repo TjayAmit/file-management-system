@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityController as WebAdminActivityController;
 use App\Http\Controllers\Admin\StorageLocationController as WebAdminStorageLocationController;
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
 use App\Http\Controllers\BranchController;
@@ -59,6 +60,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/activities', [WebAdminActivityController::class, 'index'])->name('activities.index');
+
         Route::get('/users', [WebAdminUserController::class, 'index'])->name('users.index');
         Route::post('/users', [WebAdminUserController::class, 'store'])->name('users.store');
         Route::patch('/users/{user}', [WebAdminUserController::class, 'update'])->name('users.update');

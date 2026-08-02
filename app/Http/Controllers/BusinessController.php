@@ -47,7 +47,7 @@ class BusinessController extends Controller
             name: (string) $validated['name'],
         );
 
-        $this->businessService->createBusiness($data);
+        $this->businessService->createBusiness($data, $request->user());
 
         return back()->with('status', 'Business created successfully');
     }
@@ -65,7 +65,7 @@ class BusinessController extends Controller
             name: (string) $validated['name'],
         );
 
-        $this->businessService->updateBusiness($business, $data);
+        $this->businessService->updateBusiness($business, $data, $request->user());
 
         return back()->with('status', 'Business updated successfully');
     }

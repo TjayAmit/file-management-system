@@ -47,17 +47,17 @@ class BusinessService
     /**
      * Create a new business.
      */
-    public function createBusiness(CreateBusinessData $data): BusinessModel
+    public function createBusiness(CreateBusinessData $data, ?User $user = null): BusinessModel
     {
-        return $this->businessRepository->create($data);
+        return $this->businessRepository->create($data, $user);
     }
 
     /**
      * Update a business.
      */
-    public function updateBusiness(BusinessModel $business, UpdateBusinessData $data): BusinessModel
+    public function updateBusiness(BusinessModel $business, UpdateBusinessData $data, ?User $user = null): BusinessModel
     {
-        return $this->businessRepository->update($business, $data);
+        return $this->businessRepository->update($business, $data, $user);
     }
 
     /**

@@ -29,7 +29,7 @@ class StorageLocationController extends Controller
             name: (string) $validated['name'],
         );
 
-        $this->storageLocationService->createStorageLocation($data);
+        $this->storageLocationService->createStorageLocation($data, $request->user());
 
         return back()->with('status', 'Storage location created successfully');
     }
@@ -47,7 +47,7 @@ class StorageLocationController extends Controller
             name: (string) $validated['name'],
         );
 
-        $this->storageLocationService->updateStorageLocation($storageLocation, $data);
+        $this->storageLocationService->updateStorageLocation($storageLocation, $data, $request->user());
 
         return back()->with('status', 'Storage location updated successfully');
     }

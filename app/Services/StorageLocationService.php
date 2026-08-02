@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTOs\CreateStorageLocationData;
 use App\DTOs\UpdateStorageLocationData;
 use App\Models\StorageLocation as StorageLocationModel;
+use App\Models\User;
 use App\Repositories\Interface\StorageLocation as StorageLocationRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -35,16 +36,16 @@ class StorageLocationService
     /**
      * Create a new storage location.
      */
-    public function createStorageLocation(CreateStorageLocationData $data): StorageLocationModel
+    public function createStorageLocation(CreateStorageLocationData $data, ?User $user = null): StorageLocationModel
     {
-        return $this->storageLocationRepository->create($data);
+        return $this->storageLocationRepository->create($data, $user);
     }
 
     /**
      * Update an existing storage location.
      */
-    public function updateStorageLocation(StorageLocationModel $storageLocation, UpdateStorageLocationData $data): StorageLocationModel
+    public function updateStorageLocation(StorageLocationModel $storageLocation, UpdateStorageLocationData $data, ?User $user = null): StorageLocationModel
     {
-        return $this->storageLocationRepository->update($storageLocation, $data);
+        return $this->storageLocationRepository->update($storageLocation, $data, $user);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Repositories\Eloquent;
 
 use App\DTOs\CreateUserData;
 use App\DTOs\UpdateUserData;
+use App\Models\Activity;
 use App\Models\User as UserModel;
 use App\Repositories\Interface\User as UserRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -32,7 +33,7 @@ class EloquentUser implements UserRepositoryInterface
     /**
      * Create a new user.
      */
-    public function create(CreateUserData $data): UserModel
+    public function create(CreateUserData $data, ?UserModel $actor = null): UserModel
     {
         /** @var UserModel $user */
         $user = UserModel::create([
@@ -46,13 +47,25 @@ class EloquentUser implements UserRepositoryInterface
         Role::findOrCreate($data->role, 'web');
         $user->syncRoles([$data->role]);
 
+        Activity::create([
+            'user_id' => $actor?->id,
+            'subject_type' => UserModel::class,
+            'subject_id' => $user->id,
+            'action' => 'user.created',
+            'details' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        ]);
+
         return $user;
     }
 
     /**
      * Update an existing user.
      */
-    public function update(UserModel $user, UpdateUserData $data): UserModel
+    public function update(UserModel $user, UpdateUserData $data, ?UserModel $actor = null): UserModel
     {
         $payload = array_filter([
             'name' => $data->name,
@@ -62,6 +75,9 @@ class EloquentUser implements UserRepositoryInterface
             'password' => $data->password,
         ], fn ($val) => $val !== null);
 
+        $loggedKeys = array_diff(array_keys($payload), ['password']);
+        $before = $user->only($loggedKeys);
+
         $user->update($payload);
 
         if ($data->role !== null) {
@@ -69,15 +85,34 @@ class EloquentUser implements UserRepositoryInterface
             $user->syncRoles([$data->role]);
         }
 
+        Activity::create([
+            'user_id' => $actor?->id,
+            'subject_type' => UserModel::class,
+            'subject_id' => $user->id,
+            'action' => 'user.updated',
+            'details' => [
+                'before' => $before,
+                'after' => $user->only($loggedKeys),
+            ],
+        ]);
+
         return $user;
     }
 
     /**
      * Deactivate a user.
      */
-    public function deactivate(UserModel $user): UserModel
+    public function deactivate(UserModel $user, ?UserModel $actor = null): UserModel
     {
         $user->update(['is_active' => false]);
+
+        Activity::create([
+            'user_id' => $actor?->id,
+            'subject_type' => UserModel::class,
+            'subject_id' => $user->id,
+            'action' => 'user.deactivated',
+            'details' => null,
+        ]);
 
         return $user;
     }
@@ -85,9 +120,17 @@ class EloquentUser implements UserRepositoryInterface
     /**
      * Set a temporary password for a user (offline reset).
      */
-    public function setTemporaryPassword(UserModel $user, string $password): UserModel
+    public function setTemporaryPassword(UserModel $user, string $password, ?UserModel $actor = null): UserModel
     {
         $user->update(['password' => $password]);
+
+        Activity::create([
+            'user_id' => $actor?->id,
+            'subject_type' => UserModel::class,
+            'subject_id' => $user->id,
+            'action' => 'user.password_reset',
+            'details' => null,
+        ]);
 
         return $user;
     }

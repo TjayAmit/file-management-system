@@ -48,7 +48,7 @@ class UserController extends Controller
             role: (string) $validated['role'],
         );
 
-        $this->userService->createUser($data);
+        $this->userService->createUser($data, $request->user());
 
         return back()->with('status', 'User created successfully');
     }
@@ -72,7 +72,7 @@ class UserController extends Controller
             isActive: isset($validated['is_active']) ? (bool) $validated['is_active'] : null,
         );
 
-        $this->userService->updateUser($user, $data);
+        $this->userService->updateUser($user, $data, $request->user());
 
         return back()->with('status', 'User updated successfully');
     }
@@ -80,9 +80,9 @@ class UserController extends Controller
     /**
      * Deactivate the specified user.
      */
-    public function deactivate(User $user): RedirectResponse
+    public function deactivate(Request $request, User $user): RedirectResponse
     {
-        $this->userService->deactivateUser($user);
+        $this->userService->deactivateUser($user, $request->user());
 
         return back()->with('status', 'User deactivated successfully');
     }
@@ -96,7 +96,7 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $this->userService->resetTemporaryPassword($user, (string) $validated['password']);
+        $this->userService->resetTemporaryPassword($user, (string) $validated['password'], $request->user());
 
         return back()->with('status', 'User temporary password set successfully');
     }
