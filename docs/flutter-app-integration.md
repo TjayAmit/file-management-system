@@ -20,3 +20,20 @@ Companion Android app (PLAN.md §6.9, ARCHITECTURE.md) is a **separate Flutter p
 
 - `NETWORK_ALLOWED_CIDRS` (`.env`) must include the office LAN range the phones sit on, or the gate stays disabled.
 - The server's static local IP (§8.10) is what gets hard-coded into the app's base URL at build time.
+
+## QR scan → resolve → show record (Issue #28)
+
+Per PLAN.md §6.9. Nothing needs to be built here — the backend endpoint this depends on already exists (`GET /api/v1/documents/{reference}` in `app/Http/Controllers/Api/V1/DocumentController.php`). This is the integration reference for the Flutter project's own session.
+
+**What already exists on the backend**
+
+- `GET /api/v1/documents/{reference}` — resolves a document by its opaque QR reference. Requires `Authorization: Bearer <token>` (`auth:sanctum`). Returns `{ success: true, message, data: <document> }` (200) with the document's business (via `branch.business`), branch, request type, document date, and current storage location (`storageLocation`) eager-loaded/available via relations; or `{ success: false, message: "Document not found" }` (404) if the reference doesn't match any document.
+- Sits behind the same office-network gate as all `/api/v1/*` routes (403 off-network, checked before auth).
+
+**What the Flutter project needs to do**
+
+1. Add a QR scanner screen (e.g. `mobile_scanner` package) that reads the opaque reference encoded in the document's QR code.
+2. On scan, call `GET /api/v1/documents/{reference}` with the stored bearer token attached.
+3. On success, show a record screen with: business name, branch, request type, document date, and current location (from `storageLocation`) so the editor can confirm it's the right paper before proceeding.
+4. On 404, show a clear "document not found" state so the user can rescan.
+5. Reuse the existing network-gate/timeout error handling from the login flow (#27) for off-network or unreachable-server cases during a scan.
