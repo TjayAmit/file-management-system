@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/documents/create', [DocumentController::class, 'create'])->middleware('role:editor,admin')->name('documents.create');
     Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
     Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->name('documents.file');
+    Route::get('/documents/{reference}/qr-code', [DocumentController::class, 'qrCode'])->name('documents.qr-code');
 
     Route::middleware(['role:editor,admin'])->group(function () {
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');

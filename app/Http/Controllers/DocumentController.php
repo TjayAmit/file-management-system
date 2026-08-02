@@ -15,6 +15,7 @@ use App\Services\SearchService;
 use App\Services\StorageLocationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -239,6 +240,22 @@ class DocumentController extends Controller
         ]);
 
         return $this->documentService->serveDocument($document, (string) $validated['action'], $request->user());
+    }
+
+    /**
+     * Generate a printable QR code (SVG) encoding the document's opaque reference.
+     */
+    public function qrCode(string $reference): Response
+    {
+        $document = $this->documentService->getDocumentByReference($reference);
+
+        if (! $document) {
+            abort(404, 'Document not found');
+        }
+
+        $svg = $this->documentService->generateQrCodeSvg($document);
+
+        return response($svg, 200, ['Content-Type' => 'image/svg+xml']);
     }
 
     /**

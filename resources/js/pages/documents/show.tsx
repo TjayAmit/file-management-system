@@ -53,6 +53,14 @@ export default function DocumentShow({ document }: { document: DocumentItem }) {
                     >
                         Print
                     </a>
+                    <a
+                        href={documents.qrCode.url(document.reference)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent"
+                    >
+                        Print QR Code
+                    </a>
                 </div>
             </div>
         </AppLayout>
