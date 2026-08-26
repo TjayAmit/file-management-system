@@ -4,6 +4,7 @@ namespace App\Repositories\Interface;
 
 use App\DTOs\CreateTransferData;
 use App\Models\Transfer as TransferModel;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface Transfer
 {
@@ -13,4 +14,11 @@ interface Transfer
      * simply a batch with one item (SCHEMA.md "Physical transfers").
      */
     public function create(CreateTransferData $data): TransferModel;
+
+    /**
+     * Paginate transfer batches, most recent first.
+     *
+     * @return LengthAwarePaginator<int, TransferModel>
+     */
+    public function paginate(int $perPage): LengthAwarePaginator;
 }

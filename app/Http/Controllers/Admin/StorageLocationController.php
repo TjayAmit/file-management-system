@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\DTOs\CreateStorageLocationData;
 use App\DTOs\UpdateStorageLocationData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StorageLocation\StoreStorageLocationRequest;
+use App\Http\Requests\StorageLocation\UpdateStorageLocationRequest;
 use App\Models\StorageLocation;
 use App\Services\StorageLocationService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 class StorageLocationController extends Controller
 {
@@ -19,16 +20,10 @@ class StorageLocationController extends Controller
     /**
      * Store a newly created storage location.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreStorageLocationRequest $request): RedirectResponse
     {
-        $this->authorize('create', StorageLocation::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateStorageLocationData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
         $this->storageLocationService->createStorageLocation($data, $request->user());
@@ -39,16 +34,10 @@ class StorageLocationController extends Controller
     /**
      * Update the specified storage location.
      */
-    public function update(Request $request, StorageLocation $storageLocation): RedirectResponse
+    public function update(UpdateStorageLocationRequest $request, StorageLocation $storageLocation): RedirectResponse
     {
-        $this->authorize('update', $storageLocation);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateStorageLocationData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
         $this->storageLocationService->updateStorageLocation($storageLocation, $data, $request->user());

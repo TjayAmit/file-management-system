@@ -12,6 +12,7 @@ use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 interface Document
@@ -22,6 +23,28 @@ interface Document
      * @return Collection<int, DocumentModel>
      */
     public function all(): Collection;
+
+    /**
+     * Paginate documents narrowed by the archive-browser filters.
+     *
+     * @param  array{query: string, branch_id: int|null, request_type_id: int|null, storage_location_id: int|null}  $filters
+     * @return LengthAwarePaginator<int, DocumentModel>
+     */
+    public function paginateFiltered(array $filters, int $perPage): LengthAwarePaginator;
+
+    /**
+     * Deletion requests, newest first, pending ones first.
+     *
+     * @return Collection<int, DeletionRequest>
+     */
+    public function deletionRequests(): Collection;
+
+    /**
+     * Counts for the dashboard tiles.
+     *
+     * @return array{documents: int, businesses: int, branches: int, request_types: int, pending_deletions: int, encoded_this_month: int, by_storage_location: array<int, array{name: string, total: int}>}
+     */
+    public function dashboardStatistics(): array;
 
     /**
      * Find document by internal ID.

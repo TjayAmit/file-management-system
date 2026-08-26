@@ -15,7 +15,6 @@ final readonly class CreateDocumentData
         public string $documentDate,
         public ?string $approvalDate,
         public ?string $requestDate,
-        public ?string $remarks,
         public UploadedFile $file,
         public User $encodedBy,
     ) {}

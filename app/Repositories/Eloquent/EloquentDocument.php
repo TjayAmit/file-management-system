@@ -8,14 +8,19 @@ use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Models\AccessLog;
 use App\Models\Activity;
+use App\Models\Branch;
+use App\Models\Business;
 use App\Models\ChangeHistory;
 use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentVersion;
+use App\Models\RequestType;
 use App\Models\SearchLog;
+use App\Models\StorageLocation;
 use App\Models\TransferItem;
 use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -32,6 +37,83 @@ class EloquentDocument implements DocumentRepositoryInterface
     public function all(): Collection
     {
         return DocumentModel::with(['branch.business', 'requestType', 'storageLocation', 'currentVersion'])->get();
+    }
+
+    /**
+     * Paginate documents narrowed by the archive-browser filters.
+     *
+     * @param  array{query: string, branch_id: int|null, request_type_id: int|null, storage_location_id: int|null}  $filters
+     * @return LengthAwarePaginator<int, DocumentModel>
+     */
+    public function paginateFiltered(array $filters, int $perPage): LengthAwarePaginator
+    {
+        $query = DocumentModel::query()
+            ->with(['branch.business', 'requestType', 'storageLocation', 'currentVersion'])
+            ->where('is_hidden', false);
+
+        if ($filters['query'] !== '') {
+            $term = '%'.str_replace(['%', '_'], ['\%', '\_'], $filters['query']).'%';
+
+            $query->where(function ($builder) use ($term): void {
+                $builder->where('title', 'like', $term)
+                    ->orWhereHas('branch', fn ($branch) => $branch->where('location', 'like', $term))
+                    ->orWhereHas('branch.business', fn ($business) => $business->where('name', 'like', $term));
+            });
+        }
+
+        foreach (['branch_id', 'request_type_id', 'storage_location_id'] as $column) {
+            if ($filters[$column] !== null) {
+                $query->where($column, $filters[$column]);
+            }
+        }
+
+        return $query
+            ->orderByRaw('COALESCE(approval_date, request_date) IS NULL')
+            ->orderByRaw('COALESCE(approval_date, request_date) DESC')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * Deletion requests, pending ones first, then newest first.
+     *
+     * @return Collection<int, DeletionRequest>
+     */
+    public function deletionRequests(): Collection
+    {
+        return DeletionRequest::with(['document.branch.business', 'requester', 'approver'])
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    /**
+     * Counts for the dashboard tiles.
+     *
+     * @return array{documents: int, businesses: int, branches: int, request_types: int, pending_deletions: int, encoded_this_month: int, by_storage_location: array<int, array{name: string, total: int}>}
+     */
+    public function dashboardStatistics(): array
+    {
+        $byLocation = StorageLocation::query()
+            ->withCount(['documents as total' => fn ($query) => $query->whereNull('deleted_at')])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (StorageLocation $location): array => [
+                'name' => $location->name,
+                'total' => (int) $location->getAttribute('total'),
+            ])
+            ->all();
+
+        return [
+            'documents' => DocumentModel::query()->count(),
+            'businesses' => Business::query()->count(),
+            'branches' => Branch::query()->count(),
+            'request_types' => RequestType::query()->count(),
+            'pending_deletions' => DeletionRequest::query()->where('status', 'pending')->count(),
+            'encoded_this_month' => DocumentModel::query()->where('scan_date', '>=', now()->startOfMonth())->count(),
+            'by_storage_location' => $byLocation,
+        ];
     }
 
     /**

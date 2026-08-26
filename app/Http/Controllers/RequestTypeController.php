@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\DTOs\CreateRequestTypeData;
 use App\DTOs\MergeRequestTypeData;
 use App\DTOs\UpdateRequestTypeData;
+use App\Http\Requests\RequestType\IndexRequestTypeRequest;
+use App\Http\Requests\RequestType\MergeRequestTypeRequest;
+use App\Http\Requests\RequestType\StoreRequestTypeRequest;
+use App\Http\Requests\RequestType\UpdateRequestTypeRequest;
 use App\Models\RequestType;
 use App\Services\RequestTypeService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -21,17 +24,18 @@ class RequestTypeController extends Controller
     /**
      * Display a listing of request types.
      */
-    public function index(Request $request): InertiaResponse
+    public function index(IndexRequestTypeRequest $request): InertiaResponse
     {
-        $this->authorize('viewAny', RequestType::class);
-
-        $query = (string) $request->query('query', '');
-        $requestTypes = $this->requestTypeService->searchRequestTypes($query);
+        $query = $request->searchTerm();
 
         return Inertia::render('request-types/index', [
-            'requestTypes' => $requestTypes,
+            'requestTypes' => $this->requestTypeService->searchRequestTypes($query),
             'filters' => [
                 'query' => $query,
+            ],
+            'can' => [
+                'manage' => $request->user()?->can('create', RequestType::class) ?? false,
+                'merge' => $request->user()?->can('merge', RequestType::class) ?? false,
             ],
         ]);
     }
@@ -39,16 +43,10 @@ class RequestTypeController extends Controller
     /**
      * Store a newly created request type in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreRequestTypeRequest $request): RedirectResponse
     {
-        $this->authorize('create', RequestType::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateRequestTypeData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
         $this->requestTypeService->createRequestType($data, $request->user());
@@ -59,16 +57,10 @@ class RequestTypeController extends Controller
     /**
      * Update the specified request type in storage.
      */
-    public function update(Request $request, RequestType $requestType): RedirectResponse
+    public function update(UpdateRequestTypeRequest $request, RequestType $requestType): RedirectResponse
     {
-        $this->authorize('update', $requestType);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateRequestTypeData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
         $this->requestTypeService->updateRequestType($requestType, $data, $request->user());
@@ -79,18 +71,11 @@ class RequestTypeController extends Controller
     /**
      * Merge duplicate request types.
      */
-    public function merge(Request $request): RedirectResponse
+    public function merge(MergeRequestTypeRequest $request): RedirectResponse
     {
-        $this->authorize('merge', RequestType::class);
-
-        $validated = $request->validate([
-            'source_request_type_id' => ['required', 'integer', 'exists:request_types,id'],
-            'target_request_type_id' => ['required', 'integer', 'exists:request_types,id', 'different:source_request_type_id'],
-        ]);
-
         $data = new MergeRequestTypeData(
-            sourceRequestTypeId: (int) $validated['source_request_type_id'],
-            targetRequestTypeId: (int) $validated['target_request_type_id'],
+            sourceRequestTypeId: (int) $request->validated('source_request_type_id'),
+            targetRequestTypeId: (int) $request->validated('target_request_type_id'),
         );
 
         $this->requestTypeService->mergeRequestTypes($data, $request->user());

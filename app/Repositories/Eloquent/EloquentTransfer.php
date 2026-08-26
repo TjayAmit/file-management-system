@@ -8,6 +8,7 @@ use App\Models\Document as DocumentModel;
 use App\Models\Transfer as TransferModel;
 use App\Models\TransferItem;
 use App\Repositories\Interface\Transfer as TransferRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class EloquentTransfer implements TransferRepositoryInterface
@@ -56,5 +57,21 @@ class EloquentTransfer implements TransferRepositoryInterface
             /** @var TransferModel */
             return $transfer->load(['items.document', 'targetLocation', 'performer']);
         });
+    }
+
+    /**
+     * Paginate transfer batches, most recent first.
+     *
+     * @return LengthAwarePaginator<int, TransferModel>
+     */
+    public function paginate(int $perPage): LengthAwarePaginator
+    {
+        return TransferModel::query()
+            ->with(['targetLocation', 'performer', 'items.document.branch.business', 'items.fromStorageLocation'])
+            ->withCount('items')
+            ->orderByDesc('transferred_at')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }

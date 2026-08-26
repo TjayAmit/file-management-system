@@ -13,7 +13,6 @@ final readonly class UpdateDocumentData
         public ?string $title = null,
         public ?string $approvalDate = null,
         public ?string $requestDate = null,
-        public ?string $remarks = null,
         public ?User $updatedBy = null,
     ) {}
 }

@@ -4,11 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\CreateTransferData;
 use App\Http\Controllers\Controller;
-use App\Models\Transfer;
+use App\Http\Requests\Transfer\StoreTransferRequest;
 use App\Services\TransferService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class TransferController extends Controller
 {
@@ -22,21 +21,12 @@ class TransferController extends Controller
      * Create a transfer batch, moving the referenced documents to a new
      * storage location. A single-document transfer is a batch of one.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreTransferRequest $request): JsonResponse
     {
-        $this->authorize('create', Transfer::class);
-
-        $validated = $request->validate([
-            'references' => ['required', 'array', 'min:1'],
-            'references.*' => ['string', 'exists:documents,reference'],
-            'to_storage_location_id' => ['required', 'integer', 'exists:storage_locations,id'],
-            'note' => ['nullable', 'string', 'max:1000'],
-        ]);
-
         $data = new CreateTransferData(
-            references: $validated['references'],
-            toStorageLocationId: (int) $validated['to_storage_location_id'],
-            note: isset($validated['note']) ? (string) $validated['note'] : null,
+            references: $request->references(),
+            toStorageLocationId: (int) $request->validated('to_storage_location_id'),
+            note: $request->validated('note') !== null ? (string) $request->validated('note') : null,
             performedBy: $request->user(),
         );
 

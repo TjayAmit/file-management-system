@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\SearchDocumentsData;
+use App\Http\Requests\Search\SearchDocumentsRequest;
+use App\Services\BranchService;
+use App\Services\BusinessService;
+use App\Services\RequestTypeService;
 use App\Services\SearchService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -13,26 +16,21 @@ class SearchController extends Controller
 {
     public function __construct(
         private readonly SearchService $searchService,
+        private readonly BusinessService $businessService,
+        private readonly BranchService $branchService,
+        private readonly RequestTypeService $requestTypeService,
     ) {}
 
     /**
-     * Search documents, narrowing business → branch → request type → date.
+     * Search documents, narrowing business -> branch -> request type -> date.
      */
-    public function index(Request $request): InertiaResponse
+    public function index(SearchDocumentsRequest $request): InertiaResponse
     {
-        $validated = $request->validate([
-            'business' => ['nullable', 'string', 'max:255'],
-            'business_id' => ['nullable', 'integer', 'exists:businesses,id'],
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-            'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
-            'location' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $businessQuery = (string) ($validated['business'] ?? '');
-        $businessId = isset($validated['business_id']) ? (int) $validated['business_id'] : null;
-        $branchId = isset($validated['branch_id']) ? (int) $validated['branch_id'] : null;
-        $requestTypeId = isset($validated['request_type_id']) ? (int) $validated['request_type_id'] : null;
-        $location = trim((string) ($validated['location'] ?? ''));
+        $businessQuery = $request->businessQuery();
+        $businessId = $request->filterId('business_id');
+        $branchId = $request->filterId('branch_id');
+        $requestTypeId = $request->filterId('request_type_id');
+        $location = $request->locationQuery();
 
         $result = null;
 
@@ -53,6 +51,9 @@ class SearchController extends Controller
             'result' => $result,
             'locationResults' => $locationSearch['branches'] ?? null,
             'locationSearchLogId' => $locationSearch['searchLogId'] ?? null,
+            'businesses' => $this->businessService->getAllBusinesses(),
+            'branches' => $businessId !== null ? $this->branchService->searchBranches($businessId, '') : [],
+            'requestTypes' => $this->requestTypeService->getAllRequestTypes(),
             'filters' => [
                 'business' => $businessQuery,
                 'business_id' => $businessId,
@@ -64,7 +65,7 @@ class SearchController extends Controller
     }
 
     /**
-     * Simple hit-rate report for the office head (PLAN.md §5.3): progress
+     * Simple hit-rate report for the office head (PLAN.md 5.3): progress
      * toward the 60% target.
      */
     public function report(): InertiaResponse

@@ -18,7 +18,8 @@ test('resolving a document by reference returns its identity and current locatio
         'storage_location_id' => $storageLocation->id,
     ]);
 
-    $response = $this->getJson("/api/v1/documents/{$document->reference}");
+    $response = $this->actingAs(User::factory()->viewer()->create(), 'sanctum')
+        ->getJson("/api/v1/documents/{$document->reference}");
 
     $response->assertStatus(200)
         ->assertJson([
@@ -30,8 +31,17 @@ test('resolving a document by reference returns its identity and current locatio
         ]);
 });
 
+test('an unauthenticated device on the network cannot resolve a document', function () {
+    $document = Document::factory()->create();
+
+    $this->getJson("/api/v1/documents/{$document->reference}")->assertStatus(401);
+    $this->getJson('/api/v1/documents')->assertStatus(401);
+    $this->getJson('/api/v1/businesses')->assertStatus(401);
+});
+
 test('resolving an unknown reference returns not found', function () {
-    $response = $this->getJson('/api/v1/documents/does-not-exist');
+    $response = $this->actingAs(User::factory()->viewer()->create(), 'sanctum')
+        ->getJson('/api/v1/documents/does-not-exist');
 
     $response->assertStatus(404)
         ->assertJson(['success' => false]);

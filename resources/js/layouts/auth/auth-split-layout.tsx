@@ -12,9 +12,9 @@ import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
 const trustPoints = [
-    'Role-based access per team',
-    'Private, authenticated storage',
-    'Soft-delete trash with restore',
+    'Search by business or by address',
+    'Know where the paper original is',
+    'Private storage, every access logged',
 ];
 
 export default function AuthSplitLayout({
@@ -42,11 +42,12 @@ export default function AuthSplitLayout({
                 </Link>
                 <div className="relative z-10 flex max-w-sm flex-col gap-6">
                     <h2 className="text-3xl font-semibold tracking-tight text-balance">
-                        All your department&rsquo;s files. One secure home.
+                        Find the file before you walk to the storage room.
                     </h2>
                     <p className="text-primary-foreground/80">
-                        Organize folders, control who can edit, and undo
-                        mistakes with trash &amp; restore.
+                        A searchable index over the office&rsquo;s paper
+                        archive: what exists, what it says, and where the
+                        original physically is.
                     </p>
                     <ul className="flex flex-col gap-2.5 text-sm">
                         {trustPoints.map((point) => (

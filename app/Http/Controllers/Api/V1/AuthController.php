@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\LoginData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\LoginRequest;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -20,16 +20,11 @@ class AuthController extends Controller
     /**
      * Authenticate a user and issue an API token.
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
         $result = $this->authService->login(new LoginData(
-            email: $validated['email'],
-            password: $validated['password'],
+            email: (string) $request->validated('email'),
+            password: (string) $request->validated('password'),
         ));
 
         if (! $result) {
