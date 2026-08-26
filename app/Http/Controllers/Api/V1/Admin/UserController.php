@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\DTOs\CreateUserData;
 use App\DTOs\UpdateUserData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResetUserPasswordRequest;
+use App\Http\Requests\Admin\StoreUserRequest;
+use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -21,39 +23,28 @@ class UserController extends Controller
     ) {}
 
     /**
-     * Display a listing of users.
+     * Display a listing of the users.
      */
     public function index(): JsonResponse
     {
         $this->authorize('viewAny', User::class);
 
-        $users = $this->userService->getAllUsers();
-
-        return $this->successResponse($users, 'Users retrieved successfully');
+        return $this->successResponse($this->userService->getAllUsers(), 'Users retrieved successfully');
     }
 
     /**
      * Store a newly created user.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreUserRequest $request): JsonResponse
     {
-        $this->authorize('create', User::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'string', Rule::in(['viewer', 'editor', 'admin'])],
-        ]);
-
         $data = new CreateUserData(
-            name: (string) $validated['name'],
-            email: (string) $validated['email'],
-            password: (string) $validated['password'],
-            role: (string) $validated['role'],
+            name: (string) $request->validated('name'),
+            email: (string) $request->validated('email'),
+            password: (string) $request->validated('password'),
+            role: (string) $request->validated('role'),
         );
 
-        $user = $this->userService->createUser($data);
+        $user = $this->userService->createUser($data, $request->user());
 
         return $this->successResponse($user, 'User created successfully', 201);
     }
@@ -61,25 +52,16 @@ class UserController extends Controller
     /**
      * Update the specified user.
      */
-    public function update(Request $request, User $user): JsonResponse
+    public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
-        $this->authorize('update', $user);
-
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['sometimes', 'string', Rule::in(['viewer', 'editor', 'admin'])],
-            'is_active' => ['sometimes', 'boolean'],
-        ]);
-
         $data = new UpdateUserData(
-            name: isset($validated['name']) ? (string) $validated['name'] : null,
-            email: isset($validated['email']) ? (string) $validated['email'] : null,
-            role: isset($validated['role']) ? (string) $validated['role'] : null,
-            isActive: isset($validated['is_active']) ? (bool) $validated['is_active'] : null,
+            name: $request->validated('name') !== null ? (string) $request->validated('name') : null,
+            email: $request->validated('email') !== null ? (string) $request->validated('email') : null,
+            role: $request->validated('role') !== null ? (string) $request->validated('role') : null,
+            isActive: $request->validated('is_active') !== null ? (bool) $request->validated('is_active') : null,
         );
 
-        $updatedUser = $this->userService->updateUser($user, $data);
+        $updatedUser = $this->userService->updateUser($user, $data, $request->user());
 
         return $this->successResponse($updatedUser, 'User updated successfully');
     }
@@ -87,27 +69,21 @@ class UserController extends Controller
     /**
      * Deactivate the specified user.
      */
-    public function deactivate(User $user): JsonResponse
+    public function deactivate(Request $request, User $user): JsonResponse
     {
         $this->authorize('deactivate', $user);
 
-        $deactivatedUser = $this->userService->deactivateUser($user);
+        $deactivatedUser = $this->userService->deactivateUser($user, $request->user());
 
         return $this->successResponse($deactivatedUser, 'User deactivated successfully');
     }
 
     /**
-     * Admin offline reset temporary password.
+     * Admin offline reset temporary password (PLAN.md 6.5).
      */
-    public function resetPassword(Request $request, User $user): JsonResponse
+    public function resetPassword(ResetUserPasswordRequest $request, User $user): JsonResponse
     {
-        $this->authorize('resetPassword', $user);
-
-        $validated = $request->validate([
-            'password' => ['required', 'string', 'min:8'],
-        ]);
-
-        $resetUser = $this->userService->resetTemporaryPassword($user, (string) $validated['password']);
+        $resetUser = $this->userService->resetTemporaryPassword($user, $request->password(), $request->user());
 
         return $this->successResponse($resetUser, 'User temporary password set successfully');
     }

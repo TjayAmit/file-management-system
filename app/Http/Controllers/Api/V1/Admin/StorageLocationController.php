@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\DTOs\CreateStorageLocationData;
 use App\DTOs\UpdateStorageLocationData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StorageLocation\StoreStorageLocationRequest;
+use App\Http\Requests\StorageLocation\UpdateStorageLocationRequest;
 use App\Models\StorageLocation;
 use App\Services\StorageLocationService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class StorageLocationController extends Controller
 {
@@ -22,40 +23,28 @@ class StorageLocationController extends Controller
     /**
      * Store a newly created storage location.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreStorageLocationRequest $request): JsonResponse
     {
-        $this->authorize('create', StorageLocation::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateStorageLocationData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
-        $location = $this->storageLocationService->createStorageLocation($data);
+        $storageLocation = $this->storageLocationService->createStorageLocation($data, $request->user());
 
-        return $this->successResponse($location, 'Storage location created successfully', 201);
+        return $this->successResponse($storageLocation, 'Storage location created successfully', 201);
     }
 
     /**
      * Update the specified storage location.
      */
-    public function update(Request $request, StorageLocation $storageLocation): JsonResponse
+    public function update(UpdateStorageLocationRequest $request, StorageLocation $storageLocation): JsonResponse
     {
-        $this->authorize('update', $storageLocation);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateStorageLocationData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
-        $updatedLocation = $this->storageLocationService->updateStorageLocation($storageLocation, $data);
+        $updated = $this->storageLocationService->updateStorageLocation($storageLocation, $data, $request->user());
 
-        return $this->successResponse($updatedLocation, 'Storage location updated successfully');
+        return $this->successResponse($updated, 'Storage location updated successfully');
     }
 }

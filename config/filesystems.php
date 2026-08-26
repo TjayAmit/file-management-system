@@ -38,6 +38,21 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Scanned documents live here. Never web-accessible: the archive is
+         * served only through an authenticated, access-logged route
+         * (PLAN.md section 3.5), so this disk has no `url` and no public
+         * visibility.
+         */
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/documents'),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

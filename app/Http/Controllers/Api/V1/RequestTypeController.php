@@ -6,11 +6,14 @@ use App\DTOs\CreateRequestTypeData;
 use App\DTOs\MergeRequestTypeData;
 use App\DTOs\UpdateRequestTypeData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RequestType\IndexRequestTypeRequest;
+use App\Http\Requests\RequestType\MergeRequestTypeRequest;
+use App\Http\Requests\RequestType\StoreRequestTypeRequest;
+use App\Http\Requests\RequestType\UpdateRequestTypeRequest;
 use App\Models\RequestType;
 use App\Services\RequestTypeService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class RequestTypeController extends Controller
 {
@@ -21,12 +24,11 @@ class RequestTypeController extends Controller
     ) {}
 
     /**
-     * Display a listing of request types (supports typeahead query).
+     * Display a listing of request types (with typeahead query support).
      */
-    public function index(Request $request): JsonResponse
+    public function index(IndexRequestTypeRequest $request): JsonResponse
     {
-        $query = (string) $request->query('query', '');
-        $requestTypes = $this->requestTypeService->searchRequestTypes($query);
+        $requestTypes = $this->requestTypeService->searchRequestTypes($request->searchTerm());
 
         return $this->successResponse($requestTypes, 'Request types retrieved successfully');
     }
@@ -34,19 +36,13 @@ class RequestTypeController extends Controller
     /**
      * Store a newly created request type.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreRequestTypeRequest $request): JsonResponse
     {
-        $this->authorize('create', RequestType::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateRequestTypeData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
-        $requestType = $this->requestTypeService->createRequestType($data);
+        $requestType = $this->requestTypeService->createRequestType($data, $request->user());
 
         return $this->successResponse($requestType, 'Request type created successfully', 201);
     }
@@ -54,19 +50,13 @@ class RequestTypeController extends Controller
     /**
      * Update the specified request type.
      */
-    public function update(Request $request, RequestType $requestType): JsonResponse
+    public function update(UpdateRequestTypeRequest $request, RequestType $requestType): JsonResponse
     {
-        $this->authorize('update', $requestType);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateRequestTypeData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
-        $updatedRequestType = $this->requestTypeService->updateRequestType($requestType, $data);
+        $updatedRequestType = $this->requestTypeService->updateRequestType($requestType, $data, $request->user());
 
         return $this->successResponse($updatedRequestType, 'Request type updated successfully');
     }
@@ -74,18 +64,11 @@ class RequestTypeController extends Controller
     /**
      * Merge duplicate request types.
      */
-    public function merge(Request $request): JsonResponse
+    public function merge(MergeRequestTypeRequest $request): JsonResponse
     {
-        $this->authorize('merge', RequestType::class);
-
-        $validated = $request->validate([
-            'source_request_type_id' => ['required', 'integer', 'exists:request_types,id'],
-            'target_request_type_id' => ['required', 'integer', 'exists:request_types,id', 'different:source_request_type_id'],
-        ]);
-
         $data = new MergeRequestTypeData(
-            sourceRequestTypeId: (int) $validated['source_request_type_id'],
-            targetRequestTypeId: (int) $validated['target_request_type_id'],
+            sourceRequestTypeId: (int) $request->validated('source_request_type_id'),
+            targetRequestTypeId: (int) $request->validated('target_request_type_id'),
         );
 
         $targetRequestType = $this->requestTypeService->mergeRequestTypes($data, $request->user());

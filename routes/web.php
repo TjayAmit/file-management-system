@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\StorageLocationController as WebAdminStorageLocat
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeletionRequestController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\RequestTypeController;
@@ -18,13 +19,14 @@ Route::inertia('/', 'welcome')->name('home');
 Route::get('/system-status', SystemStatusController::class)->name('system-status');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/businesses', [BusinessController::class, 'index'])->name('businesses.index');
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
     Route::get('/request-types', [RequestTypeController::class, 'index'])->name('request-types.index');
     Route::get('/storage-locations', [StorageLocationController::class, 'index'])->name('storage-locations.index');
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+    Route::get('/transfers', [TransferController::class, 'index'])->name('transfers.index');
 
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('/documents/create', [DocumentController::class, 'create'])->middleware('role:editor,admin')->name('documents.create');
@@ -33,6 +35,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/documents/{reference}/qr-code', [DocumentController::class, 'qrCode'])->name('documents.qr-code');
 
     Route::middleware(['role:editor,admin'])->group(function () {
+        Route::get('/deletion-requests', [DeletionRequestController::class, 'index'])->name('deletion-requests.index');
+
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');
         Route::patch('/businesses/{business}', [BusinessController::class, 'update'])->name('businesses.update');
         Route::post('/businesses/merge', [BusinessController::class, 'merge'])->name('businesses.merge');

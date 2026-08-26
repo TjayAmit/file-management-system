@@ -6,11 +6,14 @@ use App\DTOs\CreateBusinessData;
 use App\DTOs\MergeBusinessData;
 use App\DTOs\UpdateBusinessData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\IndexBusinessRequest;
+use App\Http\Requests\Business\MergeBusinessRequest;
+use App\Http\Requests\Business\StoreBusinessRequest;
+use App\Http\Requests\Business\UpdateBusinessRequest;
 use App\Models\Business;
 use App\Services\BusinessService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class BusinessController extends Controller
 {
@@ -23,10 +26,9 @@ class BusinessController extends Controller
     /**
      * Display a listing of businesses (with typeahead query support).
      */
-    public function index(Request $request): JsonResponse
+    public function index(IndexBusinessRequest $request): JsonResponse
     {
-        $query = (string) $request->query('query', '');
-        $businesses = $this->businessService->searchBusinesses($query);
+        $businesses = $this->businessService->searchBusinesses($request->searchTerm());
 
         return $this->successResponse($businesses, 'Businesses retrieved successfully');
     }
@@ -34,19 +36,13 @@ class BusinessController extends Controller
     /**
      * Store a newly created business.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreBusinessRequest $request): JsonResponse
     {
-        $this->authorize('create', Business::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateBusinessData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
-        $business = $this->businessService->createBusiness($data);
+        $business = $this->businessService->createBusiness($data, $request->user());
 
         return $this->successResponse($business, 'Business created successfully', 201);
     }
@@ -54,19 +50,13 @@ class BusinessController extends Controller
     /**
      * Update the specified business.
      */
-    public function update(Request $request, Business $business): JsonResponse
+    public function update(UpdateBusinessRequest $request, Business $business): JsonResponse
     {
-        $this->authorize('update', $business);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateBusinessData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
-        $updatedBusiness = $this->businessService->updateBusiness($business, $data);
+        $updatedBusiness = $this->businessService->updateBusiness($business, $data, $request->user());
 
         return $this->successResponse($updatedBusiness, 'Business updated successfully');
     }
@@ -74,18 +64,11 @@ class BusinessController extends Controller
     /**
      * Merge a duplicate business into a target business.
      */
-    public function merge(Request $request): JsonResponse
+    public function merge(MergeBusinessRequest $request): JsonResponse
     {
-        $this->authorize('merge', Business::class);
-
-        $validated = $request->validate([
-            'source_id' => ['required', 'integer', 'exists:businesses,id'],
-            'target_id' => ['required', 'integer', 'exists:businesses,id', 'different:source_id'],
-        ]);
-
         $data = new MergeBusinessData(
-            sourceId: (int) $validated['source_id'],
-            targetId: (int) $validated['target_id'],
+            sourceId: (int) $request->validated('source_id'),
+            targetId: (int) $request->validated('target_id'),
         );
 
         $targetBusiness = $this->businessService->mergeBusinesses($data, $request->user());

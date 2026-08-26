@@ -1,20 +1,22 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
+    Building2,
     Check,
-    CloudUpload,
+    Clock,
     Download,
-    FileSpreadsheet,
     FileText,
-    Folder,
-    FolderTree,
+    History,
     KeyRound,
     Lock,
+    MapPin,
+    QrCode,
     Search,
     ShieldCheck,
-    Trash2,
+    Tags,
     UserCog,
     Users,
+    WifiOff,
 } from 'lucide-react';
 import type { ComponentType, ReactNode, SVGProps } from 'react';
 import LogoMark from '@/components/logo-mark';
@@ -26,40 +28,40 @@ type IconType = ComponentType<SVGProps<SVGSVGElement>>;
 
 const features: { icon: IconType; title: string; description: string }[] = [
     {
-        icon: FolderTree,
-        title: 'Nested folders',
-        description:
-            'Build the folder tree your department already thinks in. Rename and move anything without ever breaking a download link.',
-    },
-    {
-        icon: CloudUpload,
-        title: 'Multi-file upload',
-        description:
-            'Drop in several files at once and watch real-time progress bars. Duplicate names are auto-suffixed, never overwritten.',
-    },
-    {
         icon: Search,
-        title: 'Instant search',
+        title: 'Search that never says no',
         description:
-            'Find any file by name across your whole workspace. Results stay scoped to your team and never surface trashed items.',
+            'Every search ends in one of three answers — found, known business with nothing encoded, or not in the list. A blank result that reads as a denial is the one outcome the system will not produce.',
     },
     {
-        icon: Trash2,
-        title: 'Trash & restore',
+        icon: MapPin,
+        title: 'Address-first search',
         description:
-            'Deletes are soft by default. Restore a single file or an entire folder subtree — only admins can delete forever.',
+            'When a matter arrives with the building known but the owner unknown, search the address instead. Location is a way in, not just a filter under a business name.',
     },
     {
-        icon: Users,
-        title: 'Team workspaces',
+        icon: QrCode,
+        title: 'Know where the paper is',
         description:
-            'Every department gets an isolated workspace. Belong to several teams and switch between them in a single click.',
+            'Each document carries a printed QR code. Scan it with the companion Android app to record a move, so nobody crosses the city on a guess.',
     },
     {
-        icon: ShieldCheck,
-        title: 'Role-based access',
+        icon: Tags,
+        title: 'Vocabularies that stay clean',
         description:
-            'Admins, editors, and viewers per team. Read-only members can browse and download but never change a thing.',
+            'Business, branch, and request type suggest what already exists as you type — so one building never fragments into "Rizal St", "Rizal Street", and "Rizal".',
+    },
+    {
+        icon: History,
+        title: 'Every correction is reversible',
+        description:
+            'Metadata changes are recorded and can be reverted. Replacing a poor scan supersedes the old one rather than destroying it.',
+    },
+    {
+        icon: Clock,
+        title: 'Deletion takes two people',
+        description:
+            'An editor files a request with a reason; an admin decides. Approved documents are held for 90 days before they are purged for good.',
     },
 ];
 
@@ -73,35 +75,35 @@ const roles: {
     {
         icon: Download,
         name: 'Viewer',
-        tagline: 'Read-only peace of mind',
+        tagline: 'Read-only, like the storage room',
         permissions: [
-            'Browse the full folder tree',
-            'Search across the workspace',
-            'Download any file',
+            'Search by business or by address',
+            'Open, download, and print any scan',
+            'See where each paper original is',
             'Zero risk of accidental changes',
         ],
     },
     {
         icon: FileText,
         name: 'Editor',
-        tagline: 'Everyday file work',
+        tagline: 'The people who fill the archive',
         highlight: true,
         permissions: [
             'Everything a viewer can do',
-            'Upload, rename, and move files',
-            'Create and organize folders',
-            'Move items to trash and restore them',
+            'Encode documents and correct metadata',
+            'Create businesses, branches, and request types',
+            'Move paper between locations and file deletion requests',
         ],
     },
     {
         icon: UserCog,
-        name: 'Team admin',
-        tagline: 'Full control of the workspace',
+        name: 'Admin',
+        tagline: 'The office head',
         permissions: [
             'Everything an editor can do',
-            'Add members and assign roles',
-            'Delete files forever',
-            'Empty the team trash',
+            'Provision accounts and reset passwords in person',
+            'Approve or reject deletion requests',
+            'Read the activity log and the search hit-rate report',
         ],
     },
 ];
@@ -110,25 +112,31 @@ const securityPoints: { icon: IconType; title: string; description: string }[] =
     [
         {
             icon: Lock,
-            title: 'Private storage',
+            title: 'Private storage, logged access',
             description:
-                'Files live on a private disk — there are no public URLs. Every download is served through an authenticated route.',
+                'Scans live on a private disk with no public URLs. Every view, download, and print is served through an authenticated route and recorded against the person who asked for it.',
+        },
+        {
+            icon: WifiOff,
+            title: 'On the office network only',
+            description:
+                'The server sits inside the office and is unreachable from outside it. Searching, viewing, printing, and QR updates all keep working with the internet down.',
         },
         {
             icon: KeyRound,
-            title: 'Two-factor & passkeys',
+            title: 'Two-factor and passkeys',
             description:
-                'Protect sign-in with TOTP two-factor authentication or go passwordless with modern passkeys.',
+                'Protect sign-in with TOTP two-factor authentication, or go passwordless with a passkey.',
         },
         {
             icon: ShieldCheck,
             title: 'Managed accounts',
             description:
-                'No self-signup. An administrator provisions every account and team, so access is always intentional.',
+                'No self-signup. An administrator provisions every account and assigns its role, so access is always intentional.',
         },
     ];
 
-function BrowserRow({
+function ResultRow({
     icon,
     name,
     meta,
@@ -162,14 +170,14 @@ export default function Welcome() {
     const primaryCta = auth.user ? (
         <Button asChild size="lg">
             <Link href={dashboard()}>
-                Open your workspace
+                Open the archive
                 <ArrowRight />
             </Link>
         </Button>
     ) : (
         <Button asChild size="lg">
             <Link href={login()}>
-                Sign in to your workspace
+                Sign in to the archive
                 <ArrowRight />
             </Link>
         </Button>
@@ -233,30 +241,33 @@ export default function Welcome() {
                                     variant="secondary"
                                     className="rounded-full px-3 py-1"
                                 >
-                                    <Users />
-                                    Built for departments and their teams
+                                    <Building2 />A searchable index over a paper
+                                    archive
                                 </Badge>
                                 <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-                                    All your department&rsquo;s files. One
-                                    secure home.
+                                    Thirty minutes in the storage room. Or
+                                    thirty seconds at your desk.
                                 </h1>
                                 <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-                                    Organize folders, upload with live progress,
-                                    and control exactly who can view, edit, or
-                                    manage — with a trash that lets you undo
-                                    mistakes before they matter.
+                                    The office keeps its records on paper, and
+                                    after three or four years those papers leave
+                                    for a storage building across the city. This
+                                    system is the index: it tells you whether a
+                                    document exists, lets you read the scan, and
+                                    says where the original physically is —
+                                    before anyone walks anywhere.
                                 </p>
                                 <div className="flex flex-wrap items-center gap-3">
                                     {primaryCta}
                                     <Button asChild variant="outline" size="lg">
-                                        <a href="#features">Explore features</a>
+                                        <a href="#features">See how it works</a>
                                     </Button>
                                 </div>
                                 <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                                     {[
-                                        'Role-based access',
-                                        'Private storage',
-                                        'Trash & restore',
+                                        'Never a false "no record"',
+                                        'QR-tracked locations',
+                                        'Works offline',
                                     ].map((item) => (
                                         <span
                                             key={item}
@@ -269,7 +280,7 @@ export default function Welcome() {
                                 </div>
                             </div>
 
-                            {/* Mock file browser */}
+                            {/* Mock search result */}
                             <div className="relative">
                                 <div className="rounded-xl border border-border bg-card shadow-xl shadow-primary/5">
                                     <div className="flex items-center gap-2 border-b border-border px-4 py-3">
@@ -278,74 +289,65 @@ export default function Welcome() {
                                         <span className="size-2.5 rounded-full bg-muted-foreground/30" />
                                         <div className="ml-3 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                                             <span className="font-medium text-foreground">
-                                                Finance
+                                                ABC Corporation
                                             </span>
                                             <span>/</span>
-                                            <span>Reports</span>
+                                            <span>14 Rizal Street</span>
                                             <span>/</span>
-                                            <span>2026</span>
+                                            <span>Setback inspection</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
                                         <Search className="size-4 text-muted-foreground" />
                                         <span className="text-sm text-muted-foreground">
-                                            Search files…
+                                            Search by business or address…
                                         </span>
                                     </div>
                                     <div className="space-y-0.5 p-2">
-                                        <BrowserRow
-                                            icon={
-                                                <Folder className="size-4 shrink-0 text-muted-foreground" />
-                                            }
-                                            name="Quarterly reports"
-                                            meta="12 items"
-                                        />
-                                        <BrowserRow
-                                            icon={
-                                                <Folder className="size-4 shrink-0 text-muted-foreground" />
-                                            }
-                                            name="Invoices"
-                                            meta="48 items"
-                                        />
-                                        <BrowserRow
+                                        <ResultRow
                                             icon={
                                                 <FileText className="size-4 shrink-0 text-muted-foreground" />
                                             }
-                                            name="Q3-summary.pdf"
-                                            meta="2.4 MB"
+                                            name="Setback inspection request"
+                                            meta="Approved 12 Mar 2024"
                                         />
-                                        <BrowserRow
-                                            icon={
-                                                <FileSpreadsheet className="size-4 shrink-0 text-muted-foreground" />
-                                            }
-                                            name="annual-budget.xlsx"
-                                            meta="1.1 MB"
-                                        />
-                                        <BrowserRow
+                                        <ResultRow
                                             icon={
                                                 <FileText className="size-4 shrink-0 text-muted-foreground" />
                                             }
-                                            name="board-minutes.docx"
-                                            meta="380 KB"
+                                            name="Occupancy permit application"
+                                            meta="Approved 08 Aug 2023"
+                                        />
+                                        <ResultRow
+                                            icon={
+                                                <FileText className="size-4 shrink-0 text-muted-foreground" />
+                                            }
+                                            name="Building plan endorsement"
+                                            meta="Approved 21 Jan 2023"
+                                        />
+                                        <ResultRow
+                                            icon={
+                                                <FileText className="size-4 shrink-0 text-muted-foreground" />
+                                            }
+                                            name="Fire safety clearance"
+                                            meta="Approved 04 Nov 2022"
                                             muted
                                         />
                                     </div>
                                 </div>
 
-                                {/* Floating upload progress */}
+                                {/* Floating location chip */}
                                 <div className="absolute -bottom-6 -left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-lg sm:-left-8">
                                     <div className="flex items-center gap-2">
-                                        <CloudUpload className="size-4 text-muted-foreground" />
+                                        <MapPin className="size-4 text-muted-foreground" />
                                         <span className="truncate text-xs font-medium">
-                                            Uploading annual-report.pdf
-                                        </span>
-                                        <span className="ml-auto text-xs text-muted-foreground">
-                                            72%
+                                            Paper original
                                         </span>
                                     </div>
-                                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                                        <div className="h-full w-[72%] rounded-full bg-primary" />
-                                    </div>
+                                    <p className="mt-1.5 text-xs text-muted-foreground">
+                                        Central storage building — moved 4 Feb
+                                        2026
+                                    </p>
                                 </div>
 
                                 {/* Floating role chip */}
@@ -355,7 +357,7 @@ export default function Welcome() {
                                         Editor
                                     </span>
                                     <span className="text-xs text-muted-foreground">
-                                        Finance team
+                                        Records section
                                     </span>
                                 </div>
                             </div>
@@ -370,12 +372,13 @@ export default function Welcome() {
                         <div className="mx-auto w-full max-w-6xl px-6 py-20 lg:py-24">
                             <div className="mx-auto max-w-2xl text-center">
                                 <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                                    Everything a shared drive should have been
+                                    Built to make work findable, not to
+                                    eliminate work
                                 </h2>
                                 <p className="mt-4 text-lg text-muted-foreground">
-                                    No more email attachments and mystery
-                                    folders. One organized, searchable place per
-                                    team.
+                                    Where the choice was between less staff
+                                    effort and more reliable data, this system
+                                    chose reliable data.
                                 </p>
                             </div>
                             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -406,12 +409,13 @@ export default function Welcome() {
                         <div className="mx-auto w-full max-w-6xl px-6 py-20 lg:py-24">
                             <div className="mx-auto max-w-2xl text-center">
                                 <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                                    The right access for every teammate
+                                    Reading is open. Changing is not.
                                 </h2>
                                 <p className="mt-4 text-lg text-muted-foreground">
-                                    Assign a role per team member — from
-                                    read-only viewers to admins who run the
-                                    workspace.
+                                    Any staff account can read anything — the
+                                    storage room was never locked to
+                                    individuals. Every change, though, has a
+                                    named owner.
                                 </p>
                             </div>
                             <div className="mt-14 grid gap-6 lg:grid-cols-3">
@@ -487,13 +491,13 @@ export default function Welcome() {
                                         Security first
                                     </Badge>
                                     <h2 className="mt-5 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                                        Your files never leave the building
+                                        The records never leave the building
                                     </h2>
                                     <p className="mt-4 text-lg text-muted-foreground">
-                                        Designed for organizations that keep
-                                        sensitive documents in-house. Access is
-                                        provisioned, authenticated, and scoped
-                                        to your team — nothing is ever public.
+                                        This is sensitive business information
+                                        the office wants kept physically on
+                                        site. The server runs on the office
+                                        network, and nothing is ever public.
                                     </p>
                                 </div>
                                 <div className="grid gap-4">
@@ -536,13 +540,13 @@ export default function Welcome() {
                                 />
                                 <div className="relative mx-auto flex max-w-xl flex-col items-center gap-5">
                                     <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                                        Ready to get your team&rsquo;s files in
-                                        order?
+                                        Stop searching the room. Start searching
+                                        the index.
                                     </h2>
                                     <p className="text-lg text-primary-foreground/80">
                                         Sign in with the account your
-                                        administrator set up and start
-                                        organizing today.
+                                        administrator set up, and find out in
+                                        seconds what used to take half an hour.
                                     </p>
                                     <Button
                                         asChild
@@ -558,7 +562,7 @@ export default function Welcome() {
                                             }
                                         >
                                             {auth.user
-                                                ? 'Open your workspace'
+                                                ? 'Open the archive'
                                                 : 'Sign in'}
                                             <ArrowRight />
                                         </Link>
@@ -578,9 +582,9 @@ export default function Welcome() {
                             />
                             <span>File Management System</span>
                         </div>
-                        <p>
-                            Secure, team-based file management for your
-                            organization.
+                        <p className="flex items-center gap-1.5">
+                            <Users className="size-4" />
+                            An index over the office&rsquo;s paper archive.
                         </p>
                     </div>
                 </footer>

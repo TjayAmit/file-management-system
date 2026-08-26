@@ -1,35 +1,54 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Form, Head, router } from '@inertiajs/react';
+import { Building2, GitMerge, Plus, Search, Upload } from 'lucide-react';
 import type { FormEvent } from 'react';
-import businesses from '@/actions/App/Http/Controllers/BusinessController';
+import { useState } from 'react';
+import EmptyState from '@/components/empty-state';
+import FlashMessage from '@/components/flash-message';
+import InputError from '@/components/input-error';
+import PageHeader from '@/components/page-header';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import AppLayout from '@/layouts/app-layout';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import businesses from '@/routes/businesses';
 
-interface BranchItem {
-    id: number;
-    location: string;
-}
+type BranchItem = { id: number; location: string };
 
-interface BusinessItem {
+type BusinessItem = {
     id: number;
     name: string;
     branches?: BranchItem[];
-}
+};
+
+const selectClass =
+    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30';
 
 export default function BusinessIndex({
     businesses: businessList,
+    filters,
+    can,
 }: {
     businesses: BusinessItem[];
+    filters: { query: string };
+    can: { manage: boolean; merge: boolean };
 }) {
-    const { status, errors } = usePage<{
-        status?: string;
-        errors: Record<string, string>;
-    }>().props;
+    const [query, setQuery] = useState(filters.query);
     const [rowsText, setRowsText] = useState('');
-    const [processing, setProcessing] = useState(false);
+    const [seeding, setSeeding] = useState(false);
+    const [showSeed, setShowSeed] = useState(false);
+    const [editing, setEditing] = useState<number | null>(null);
 
-    function submit(e: FormEvent) {
-        e.preventDefault();
+    function runSearch(event: FormEvent) {
+        event.preventDefault();
+        router.get(businesses.index.url(), query ? { query } : {}, {
+            preserveState: true,
+            replace: true,
+        });
+    }
+
+    function seed(event: FormEvent) {
+        event.preventDefault();
 
         const rows = rowsText
             .split('\n')
@@ -43,74 +62,341 @@ export default function BusinessIndex({
                 return { name, branch: branch || null };
             });
 
-        setProcessing(true);
+        setSeeding(true);
         router.post(
             businesses.bulkSeed.url(),
             { rows },
             {
-                onFinish: () => setProcessing(false),
+                onFinish: () => setSeeding(false),
                 onSuccess: () => setRowsText(''),
             },
         );
     }
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Businesses', href: '/businesses' }]}>
+        <>
             <Head title="Businesses" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <h1 className="text-xl font-bold">Business Vocabulary</h1>
+            <div className="flex flex-1 flex-col gap-6 p-6">
+                <PageHeader
+                    title="Known businesses"
+                    description="The list that turns a blank search into a directive: if a business is here, its papers exist somewhere."
+                    actions={
+                        can.manage && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowSeed((open) => !open)}
+                            >
+                                <Upload />
+                                Bulk seed
+                            </Button>
+                        )
+                    }
+                />
 
-                <div className="rounded-lg border p-4">
-                    <h2 className="mb-2 font-semibold">
-                        Bulk seed known businesses
-                    </h2>
-                    <p className="mb-2 text-sm text-muted-foreground">
-                        One entry per line: <code>Business Name</code> or{' '}
-                        <code>Business Name | Branch Location</code>. Existing
-                        businesses and branches (matched by exact name) are left
-                        untouched.
-                    </p>
-                    {status && (
-                        <p className="mb-2 text-sm text-green-600">{status}</p>
-                    )}
-                    <form onSubmit={submit} className="flex flex-col gap-2">
-                        <textarea
-                            className="min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            value={rowsText}
-                            onChange={(e) => setRowsText(e.target.value)}
-                            placeholder={'Acme Corp | Main St\nJollibee'}
-                        />
-                        {errors?.rows && (
-                            <p className="text-sm text-destructive">
-                                {errors.rows}
+                <FlashMessage />
+
+                {can.manage && showSeed && (
+                    <section className="rounded-xl border border-border bg-card">
+                        <header className="border-b border-border px-5 py-4">
+                            <h2 className="font-semibold">
+                                Seed the known-business list
+                            </h2>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                One entry per line:{' '}
+                                <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                                    Business Name
+                                </code>{' '}
+                                or{' '}
+                                <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                                    Business Name | Branch Location
+                                </code>
+                                . Entries that already exist are left untouched.
                             </p>
+                        </header>
+                        <form onSubmit={seed} className="grid gap-2 p-5">
+                            <Textarea
+                                value={rowsText}
+                                onChange={(event) =>
+                                    setRowsText(event.target.value)
+                                }
+                                rows={6}
+                                placeholder={'Acme Corp | Main St\nJollibee'}
+                            />
+                            <Button
+                                type="submit"
+                                disabled={seeding}
+                                className="justify-self-start"
+                            >
+                                Seed businesses
+                            </Button>
+                        </form>
+                    </section>
+                )}
+
+                {can.manage && (
+                    <section className="grid gap-6 lg:grid-cols-2">
+                        <div className="rounded-xl border border-border bg-card">
+                            <header className="border-b border-border px-5 py-4">
+                                <h2 className="font-semibold">
+                                    Add a business
+                                </h2>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Search the list first — a variant spelling
+                                    splits one business into two.
+                                </p>
+                            </header>
+                            <Form
+                                {...businesses.store.form()}
+                                resetOnSuccess
+                                className="grid gap-2 p-5"
+                            >
+                                {({ processing, errors }) => (
+                                    <>
+                                        <Label htmlFor="name">
+                                            Business name
+                                        </Label>
+                                        <Input
+                                            id="name"
+                                            name="name"
+                                            placeholder="e.g. ABC Corporation"
+                                            aria-invalid={Boolean(errors.name)}
+                                        />
+                                        <InputError message={errors.name} />
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                            className="justify-self-start"
+                                        >
+                                            <Plus />
+                                            Create business
+                                        </Button>
+                                    </>
+                                )}
+                            </Form>
+                        </div>
+
+                        {can.merge && businessList.length > 1 && (
+                            <div className="rounded-xl border border-border bg-card">
+                                <header className="border-b border-border px-5 py-4">
+                                    <h2 className="font-semibold">
+                                        Merge duplicates
+                                    </h2>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        The duplicate is retired and its
+                                        branches move to the one you keep.
+                                    </p>
+                                </header>
+                                <Form
+                                    {...businesses.merge.form()}
+                                    className="grid gap-3 p-5 sm:grid-cols-2"
+                                >
+                                    {({ processing, errors }) => (
+                                        <>
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="source_id">
+                                                    Duplicate
+                                                </Label>
+                                                <select
+                                                    id="source_id"
+                                                    name="source_id"
+                                                    className={selectClass}
+                                                >
+                                                    {businessList.map(
+                                                        (business) => (
+                                                            <option
+                                                                key={
+                                                                    business.id
+                                                                }
+                                                                value={
+                                                                    business.id
+                                                                }
+                                                            >
+                                                                {business.name}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                                <InputError
+                                                    message={errors.source_id}
+                                                />
+                                            </div>
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="target_id">
+                                                    Keep
+                                                </Label>
+                                                <select
+                                                    id="target_id"
+                                                    name="target_id"
+                                                    className={selectClass}
+                                                >
+                                                    {businessList.map(
+                                                        (business) => (
+                                                            <option
+                                                                key={
+                                                                    business.id
+                                                                }
+                                                                value={
+                                                                    business.id
+                                                                }
+                                                            >
+                                                                {business.name}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                                <InputError
+                                                    message={errors.target_id}
+                                                />
+                                            </div>
+                                            <div className="sm:col-span-2">
+                                                <Button
+                                                    type="submit"
+                                                    variant="outline"
+                                                    disabled={processing}
+                                                >
+                                                    <GitMerge />
+                                                    Merge
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
+                                </Form>
+                            </div>
                         )}
-                        <Button
-                            type="submit"
-                            disabled={processing}
-                            className="self-start"
-                        >
-                            Seed businesses
+                    </section>
+                )}
+
+                <section className="rounded-xl border border-border bg-card">
+                    <form
+                        onSubmit={runSearch}
+                        className="flex items-end gap-2 border-b border-border p-4"
+                    >
+                        <div className="grid flex-1 gap-1.5">
+                            <Label htmlFor="query">Find a business</Label>
+                            <Input
+                                id="query"
+                                value={query}
+                                onChange={(event) =>
+                                    setQuery(event.target.value)
+                                }
+                                placeholder="Start typing a name"
+                            />
+                        </div>
+                        <Button type="submit" variant="outline">
+                            <Search />
+                            Search
                         </Button>
                     </form>
-                </div>
 
-                <div className="rounded-lg border p-4">
-                    <ul className="divide-y">
-                        {businessList?.map((business) => (
-                            <li
-                                key={business.id}
-                                className="flex justify-between py-2"
-                            >
-                                <span>{business.name}</span>
-                                <span className="text-sm text-muted-foreground">
-                                    {business.branches?.length ?? 0} branches
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                    {businessList.length === 0 ? (
+                        <EmptyState
+                            icon={Building2}
+                            title={
+                                filters.query
+                                    ? 'Not in the known list'
+                                    : 'No businesses yet'
+                            }
+                            description={
+                                filters.query
+                                    ? 'This is not a denial — the business may be older or inactive. Check the ledger.'
+                                    : 'Seed the list before launch, then let it grow from what staff actually encounter.'
+                            }
+                        />
+                    ) : (
+                        <ul className="divide-y divide-border">
+                            {businessList.map((business) => (
+                                <li key={business.id} className="px-5 py-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="truncate font-medium">
+                                                {business.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {business.branches?.length ?? 0}{' '}
+                                                branch
+                                                {business.branches?.length === 1
+                                                    ? ''
+                                                    : 'es'}
+                                            </p>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            <Badge
+                                                variant="secondary"
+                                                className="rounded-full font-normal"
+                                            >
+                                                #{business.id}
+                                            </Badge>
+                                            {can.manage && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setEditing(
+                                                            editing ===
+                                                                business.id
+                                                                ? null
+                                                                : business.id,
+                                                        )
+                                                    }
+                                                >
+                                                    {editing === business.id
+                                                        ? 'Cancel'
+                                                        : 'Rename'}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {can.manage && editing === business.id && (
+                                        <Form
+                                            {...businesses.update.form(
+                                                business.id,
+                                            )}
+                                            onSuccess={() => setEditing(null)}
+                                            className="mt-3 flex items-end gap-2"
+                                        >
+                                            {({ processing, errors }) => (
+                                                <>
+                                                    <div className="grid flex-1 gap-1.5">
+                                                        <Label
+                                                            htmlFor={`name-${business.id}`}
+                                                        >
+                                                            New name
+                                                        </Label>
+                                                        <Input
+                                                            id={`name-${business.id}`}
+                                                            name="name"
+                                                            defaultValue={
+                                                                business.name
+                                                            }
+                                                        />
+                                                        <InputError
+                                                            message={
+                                                                errors.name
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <Button
+                                                        type="submit"
+                                                        size="sm"
+                                                        disabled={processing}
+                                                    >
+                                                        Save
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </Form>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+BusinessIndex.layout = {
+    breadcrumbs: [{ title: 'Businesses', href: businesses.index() }],
+};

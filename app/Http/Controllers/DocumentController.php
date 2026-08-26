@@ -6,10 +6,19 @@ use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
+use App\Http\Requests\Document\CreateDocumentRequest;
+use App\Http\Requests\Document\IndexDocumentRequest;
+use App\Http\Requests\Document\ReplaceDocumentFileRequest;
+use App\Http\Requests\Document\RequestDeletionRequest;
+use App\Http\Requests\Document\ServeDocumentRequest;
+use App\Http\Requests\Document\ShowDocumentRequest;
+use App\Http\Requests\Document\StoreDocumentRequest;
+use App\Http\Requests\Document\UpdateDocumentRequest;
 use App\Models\ChangeHistory;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Services\BranchService;
+use App\Services\BusinessService;
 use App\Services\DocumentService;
 use App\Services\RequestTypeService;
 use App\Services\SearchService;
@@ -28,71 +37,85 @@ class DocumentController extends Controller
         private readonly DocumentService $documentService,
         private readonly SearchService $searchService,
         private readonly BranchService $branchService,
+        private readonly BusinessService $businessService,
         private readonly RequestTypeService $requestTypeService,
         private readonly StorageLocationService $storageLocationService,
     ) {}
 
     /**
-     * Display a listing of documents.
+     * Display a filterable, paginated listing of documents.
      */
-    public function index(): InertiaResponse
+    public function index(IndexDocumentRequest $request): InertiaResponse
     {
-        $this->authorize('viewAny', Document::class);
-
-        $documents = $this->documentService->getAllDocuments();
+        $filters = $request->filters();
 
         return Inertia::render('documents/index', [
-            'documents' => $documents,
+            'documents' => $this->documentService->paginateDocuments($filters, $request->perPage()),
+            'branches' => $this->branchService->getAllBranches(),
+            'requestTypes' => $this->requestTypeService->getAllRequestTypes(),
+            'storageLocations' => $this->storageLocationService->getAllStorageLocations(),
+            'filters' => $filters + ['per_page' => $request->perPage()],
+            'can' => [
+                'encode' => $request->user()?->can('create', Document::class) ?? false,
+            ],
         ]);
     }
 
     /**
      * Display the specified document.
      */
-    public function show(Request $request, string $reference): InertiaResponse
+    public function show(ShowDocumentRequest $request, string $reference): InertiaResponse
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('view', $document);
 
-        $validated = $request->validate([
-            'search_log' => ['nullable', 'integer'],
-        ]);
+        $searchLogId = $request->searchLogId();
 
-        if (isset($validated['search_log'])) {
-            $this->searchService->recordOpenedDocument((int) $validated['search_log'], $document->id);
+        if ($searchLogId !== null) {
+            $this->searchService->recordOpenedDocument($searchLogId, $document->id);
         }
+
+        $document->load([
+            'branch.business',
+            'requestType',
+            'storageLocation',
+            'currentVersion',
+            'uploader',
+            'versions.uploader',
+            'changeHistory.changedBy',
+            'deletionRequests.requester',
+        ]);
 
         return Inertia::render('documents/show', [
             'document' => $document,
             'storageLocations' => $this->storageLocationService->getAllStorageLocations(),
+            'branches' => $this->branchService->getAllBranches(),
+            'requestTypes' => $this->requestTypeService->getAllRequestTypes(),
+            'can' => [
+                'update' => $request->user()?->can('update', $document) ?? false,
+                'replaceFile' => $request->user()?->can('replaceFile', $document) ?? false,
+                'revert' => $request->user()?->can('revert', $document) ?? false,
+                'requestDeletion' => $request->user()?->can('requestDeletion', $document) ?? false,
+            ],
         ]);
     }
 
     /**
      * Show the form for encoding a document not yet in the system.
      *
-     * Reached from a failed search (PLAN.md §6.3): the upload sits on the
+     * Reached from a failed search (PLAN.md 6.3): the upload sits on the
      * critical path to printing the client's copy, so it must precede it.
      */
-    public function create(Request $request): InertiaResponse
+    public function create(CreateDocumentRequest $request): InertiaResponse
     {
-        $this->authorize('create', Document::class);
-
-        $validated = $request->validate([
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-        ]);
-
         return Inertia::render('documents/create', [
+            'businesses' => $this->businessService->getAllBusinesses(),
             'branches' => $this->branchService->getAllBranches(),
             'requestTypes' => $this->requestTypeService->getAllRequestTypes(),
             'storageLocations' => $this->storageLocationService->getAllStorageLocations(),
             'filters' => [
-                'branch_id' => isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
+                'branch_id' => $request->branchId(),
             ],
         ]);
     }
@@ -100,34 +123,19 @@ class DocumentController extends Controller
     /**
      * Store a newly created document in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreDocumentRequest $request): RedirectResponse
     {
-        $this->authorize('create', Document::class);
-
-        $validated = $request->validate([
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'request_type_id' => ['required', 'integer', 'exists:request_types,id'],
-            'storage_location_id' => ['required', 'integer', 'exists:storage_locations,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'document_date' => ['required', 'date'],
-            'approval_date' => ['nullable', 'date'],
-            'request_date' => ['nullable', 'date'],
-            'remarks' => ['nullable', 'string'],
-            'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
-        ]);
-
         /** @var UploadedFile $file */
         $file = $request->file('file');
 
         $data = new CreateDocumentData(
-            branchId: (int) $validated['branch_id'],
-            requestTypeId: (int) $validated['request_type_id'],
-            storageLocationId: (int) $validated['storage_location_id'],
-            title: (string) $validated['title'],
-            documentDate: (string) $validated['document_date'],
-            approvalDate: isset($validated['approval_date']) ? (string) $validated['approval_date'] : null,
-            requestDate: isset($validated['request_date']) ? (string) $validated['request_date'] : null,
-            remarks: isset($validated['remarks']) ? (string) $validated['remarks'] : null,
+            branchId: (int) $request->validated('branch_id'),
+            requestTypeId: (int) $request->validated('request_type_id'),
+            storageLocationId: (int) $request->validated('storage_location_id'),
+            title: (string) $request->validated('title'),
+            documentDate: (string) $request->validated('document_date'),
+            approvalDate: $request->validated('approval_date') !== null ? (string) $request->validated('approval_date') : null,
+            requestDate: $request->validated('request_date') !== null ? (string) $request->validated('request_date') : null,
             file: $file,
             encodedBy: $request->user(),
         );
@@ -140,34 +148,19 @@ class DocumentController extends Controller
     /**
      * Update document metadata.
      */
-    public function update(Request $request, string $reference): RedirectResponse
+    public function update(UpdateDocumentRequest $request, string $reference): RedirectResponse
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('update', $document);
 
-        $validated = $request->validate([
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-            'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
-            'storage_location_id' => ['nullable', 'integer', 'exists:storage_locations,id'],
-            'title' => ['nullable', 'string', 'max:255'],
-            'approval_date' => ['nullable', 'date'],
-            'request_date' => ['nullable', 'date'],
-            'remarks' => ['nullable', 'string'],
-        ]);
-
         $data = new UpdateDocumentData(
-            branchId: isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
-            requestTypeId: isset($validated['request_type_id']) ? (int) $validated['request_type_id'] : null,
-            storageLocationId: isset($validated['storage_location_id']) ? (int) $validated['storage_location_id'] : null,
-            title: isset($validated['title']) ? (string) $validated['title'] : null,
-            approvalDate: isset($validated['approval_date']) ? (string) $validated['approval_date'] : null,
-            requestDate: isset($validated['request_date']) ? (string) $validated['request_date'] : null,
-            remarks: isset($validated['remarks']) ? (string) $validated['remarks'] : null,
+            branchId: $request->validated('branch_id') !== null ? (int) $request->validated('branch_id') : null,
+            requestTypeId: $request->validated('request_type_id') !== null ? (int) $request->validated('request_type_id') : null,
+            storageLocationId: $request->validated('storage_location_id') !== null ? (int) $request->validated('storage_location_id') : null,
+            title: $request->validated('title') !== null ? (string) $request->validated('title') : null,
+            approvalDate: $request->validated('approval_date') !== null ? (string) $request->validated('approval_date') : null,
+            requestDate: $request->validated('request_date') !== null ? (string) $request->validated('request_date') : null,
             updatedBy: $request->user(),
         );
 
@@ -181,11 +174,7 @@ class DocumentController extends Controller
      */
     public function revert(Request $request, string $reference, ChangeHistory $changeHistory): RedirectResponse
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('revert', $document);
 
@@ -197,19 +186,11 @@ class DocumentController extends Controller
     /**
      * Replace document PDF file scan.
      */
-    public function replaceFile(Request $request, string $reference): RedirectResponse
+    public function replaceFile(ReplaceDocumentFileRequest $request, string $reference): RedirectResponse
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('replaceFile', $document);
-
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
-        ]);
 
         /** @var UploadedFile $file */
         $file = $request->file('file');
@@ -229,11 +210,7 @@ class DocumentController extends Controller
      */
     public function revertFileVersion(Request $request, string $reference, DocumentVersion $version): RedirectResponse
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('revertFileVersion', $document);
 
@@ -245,21 +222,13 @@ class DocumentController extends Controller
     /**
      * Serve the document's PDF for viewing, downloading, or printing.
      */
-    public function serveFile(Request $request, string $reference): StreamedResponse
+    public function serveFile(ServeDocumentRequest $request, string $reference): StreamedResponse
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('view', $document);
 
-        $validated = $request->validate([
-            'action' => ['required', 'string', 'in:view,download,print'],
-        ]);
-
-        return $this->documentService->serveDocument($document, (string) $validated['action'], $request->user());
+        return $this->documentService->serveDocument($document, $request->action(), $request->user());
     }
 
     /**
@@ -267,11 +236,7 @@ class DocumentController extends Controller
      */
     public function qrCode(string $reference): Response
     {
-        $document = $this->documentService->getDocumentByReference($reference);
-
-        if (! $document) {
-            abort(404, 'Document not found');
-        }
+        $document = $this->resolveDocument($reference);
 
         $this->authorize('view', $document);
 
@@ -283,7 +248,29 @@ class DocumentController extends Controller
     /**
      * File a deletion request for a document.
      */
-    public function requestDeletion(Request $request, string $reference): RedirectResponse
+    public function requestDeletion(RequestDeletionRequest $request, string $reference): RedirectResponse
+    {
+        $document = $this->resolveDocument($reference);
+
+        $this->authorize('requestDeletion', $document);
+
+        $data = new RequestDeletionData(
+            reason: (string) $request->validated('reason'),
+            requestedBy: $request->user(),
+        );
+
+        $this->documentService->requestDeletion($document, $data);
+
+        return back()->with('status', 'Deletion request filed successfully');
+    }
+
+    /**
+     * Resolve a document by its opaque reference or fail with a 404.
+     *
+     * The reference is the only public handle on a document (PLAN.md 6.9);
+     * the internal id is never exposed in a URL.
+     */
+    private function resolveDocument(string $reference): Document
     {
         $document = $this->documentService->getDocumentByReference($reference);
 
@@ -291,19 +278,6 @@ class DocumentController extends Controller
             abort(404, 'Document not found');
         }
 
-        $this->authorize('requestDeletion', $document);
-
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:1000'],
-        ]);
-
-        $data = new RequestDeletionData(
-            reason: (string) $validated['reason'],
-            requestedBy: $request->user(),
-        );
-
-        $this->documentService->requestDeletion($document, $data);
-
-        return back()->with('status', 'Deletion request filed successfully');
+        return $document;
     }
 }

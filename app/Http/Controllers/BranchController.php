@@ -6,10 +6,15 @@ use App\DTOs\CreateBranchData;
 use App\DTOs\MergeBranchData;
 use App\DTOs\ReparentBranchData;
 use App\DTOs\UpdateBranchData;
+use App\Http\Requests\Branch\IndexBranchRequest;
+use App\Http\Requests\Branch\MergeBranchRequest;
+use App\Http\Requests\Branch\ReparentBranchRequest;
+use App\Http\Requests\Branch\StoreBranchRequest;
+use App\Http\Requests\Branch\UpdateBranchRequest;
 use App\Models\Branch;
 use App\Services\BranchService;
+use App\Services\BusinessService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -17,25 +22,27 @@ class BranchController extends Controller
 {
     public function __construct(
         private readonly BranchService $branchService,
+        private readonly BusinessService $businessService,
     ) {}
 
     /**
      * Display a listing of branches.
      */
-    public function index(Request $request): InertiaResponse
+    public function index(IndexBranchRequest $request): InertiaResponse
     {
-        $this->authorize('viewAny', Branch::class);
-
-        $businessId = $request->query('business_id') !== null ? (int) $request->query('business_id') : null;
-        $query = (string) $request->query('query', '');
-
-        $branches = $this->branchService->searchBranches($businessId, $query);
+        $businessId = $request->businessId();
+        $query = $request->searchTerm();
 
         return Inertia::render('branches/index', [
-            'branches' => $branches,
+            'branches' => $this->branchService->searchBranches($businessId, $query),
+            'businesses' => $this->businessService->getAllBusinesses(),
             'filters' => [
                 'business_id' => $businessId,
                 'query' => $query,
+            ],
+            'can' => [
+                'manage' => $request->user()?->can('create', Branch::class) ?? false,
+                'merge' => $request->user()?->can('merge', Branch::class) ?? false,
             ],
         ]);
     }
@@ -43,18 +50,11 @@ class BranchController extends Controller
     /**
      * Store a newly created branch in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreBranchRequest $request): RedirectResponse
     {
-        $this->authorize('create', Branch::class);
-
-        $validated = $request->validate([
-            'business_id' => ['required', 'integer', 'exists:businesses,id'],
-            'location' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateBranchData(
-            businessId: (int) $validated['business_id'],
-            location: (string) $validated['location'],
+            businessId: (int) $request->validated('business_id'),
+            location: (string) $request->validated('location'),
         );
 
         $this->branchService->createBranch($data, $request->user());
@@ -65,16 +65,10 @@ class BranchController extends Controller
     /**
      * Update the specified branch in storage.
      */
-    public function update(Request $request, Branch $branch): RedirectResponse
+    public function update(UpdateBranchRequest $request, Branch $branch): RedirectResponse
     {
-        $this->authorize('update', $branch);
-
-        $validated = $request->validate([
-            'location' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateBranchData(
-            location: (string) $validated['location'],
+            location: (string) $request->validated('location'),
         );
 
         $this->branchService->updateBranch($branch, $data, $request->user());
@@ -85,17 +79,11 @@ class BranchController extends Controller
     /**
      * Re-parent a branch to a new business.
      */
-    public function reparent(Request $request, Branch $branch): RedirectResponse
+    public function reparent(ReparentBranchRequest $request, Branch $branch): RedirectResponse
     {
-        $this->authorize('reparent', $branch);
-
-        $validated = $request->validate([
-            'new_business_id' => ['required', 'integer', 'exists:businesses,id'],
-        ]);
-
         $data = new ReparentBranchData(
             branchId: $branch->id,
-            newBusinessId: (int) $validated['new_business_id'],
+            newBusinessId: (int) $request->validated('new_business_id'),
         );
 
         $this->branchService->reparentBranch($data, $request->user());
@@ -106,18 +94,11 @@ class BranchController extends Controller
     /**
      * Merge duplicate branches.
      */
-    public function merge(Request $request): RedirectResponse
+    public function merge(MergeBranchRequest $request): RedirectResponse
     {
-        $this->authorize('merge', Branch::class);
-
-        $validated = $request->validate([
-            'source_branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'target_branch_id' => ['required', 'integer', 'exists:branches,id', 'different:source_branch_id'],
-        ]);
-
         $data = new MergeBranchData(
-            sourceBranchId: (int) $validated['source_branch_id'],
-            targetBranchId: (int) $validated['target_branch_id'],
+            sourceBranchId: (int) $request->validated('source_branch_id'),
+            targetBranchId: (int) $request->validated('target_branch_id'),
         );
 
         $this->branchService->mergeBranches($data, $request->user());

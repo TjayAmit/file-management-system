@@ -7,6 +7,11 @@ use App\DTOs\CreateTransferData;
 use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\UpdateDocumentData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Document\IndexDocumentRequest;
+use App\Http\Requests\Document\ReplaceDocumentFileRequest;
+use App\Http\Requests\Document\StoreDocumentRequest;
+use App\Http\Requests\Document\UpdateDocumentLocationRequest;
+use App\Http\Requests\Document\UpdateDocumentRequest;
 use App\Models\ChangeHistory;
 use App\Models\Document;
 use App\Models\DocumentVersion;
@@ -29,9 +34,9 @@ class DocumentController extends Controller
     /**
      * Display a listing of documents.
      */
-    public function index(): JsonResponse
+    public function index(IndexDocumentRequest $request): JsonResponse
     {
-        $documents = $this->documentService->getAllDocuments();
+        $documents = $this->documentService->paginateDocuments($request->filters(), $request->perPage());
 
         return $this->successResponse($documents, 'Documents retrieved successfully');
     }
@@ -39,7 +44,7 @@ class DocumentController extends Controller
     /**
      * Display the specified document by opaque reference.
      */
-    public function show(string $reference): JsonResponse
+    public function show(Request $request, string $reference): JsonResponse
     {
         $document = $this->documentService->getDocumentByReference($reference);
 
@@ -47,40 +52,27 @@ class DocumentController extends Controller
             return $this->errorResponse('Document not found', 404);
         }
 
+        $this->authorize('view', $document);
+
         return $this->successResponse($document, 'Document retrieved successfully');
     }
 
     /**
      * Store a newly created document.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreDocumentRequest $request): JsonResponse
     {
-        $this->authorize('create', Document::class);
-
-        $validated = $request->validate([
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'request_type_id' => ['required', 'integer', 'exists:request_types,id'],
-            'storage_location_id' => ['required', 'integer', 'exists:storage_locations,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'document_date' => ['required', 'date'],
-            'approval_date' => ['nullable', 'date'],
-            'request_date' => ['nullable', 'date'],
-            'remarks' => ['nullable', 'string'],
-            'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
-        ]);
-
         /** @var UploadedFile $file */
         $file = $request->file('file');
 
         $data = new CreateDocumentData(
-            branchId: (int) $validated['branch_id'],
-            requestTypeId: (int) $validated['request_type_id'],
-            storageLocationId: (int) $validated['storage_location_id'],
-            title: (string) $validated['title'],
-            documentDate: (string) $validated['document_date'],
-            approvalDate: isset($validated['approval_date']) ? (string) $validated['approval_date'] : null,
-            requestDate: isset($validated['request_date']) ? (string) $validated['request_date'] : null,
-            remarks: isset($validated['remarks']) ? (string) $validated['remarks'] : null,
+            branchId: (int) $request->validated('branch_id'),
+            requestTypeId: (int) $request->validated('request_type_id'),
+            storageLocationId: (int) $request->validated('storage_location_id'),
+            title: (string) $request->validated('title'),
+            documentDate: (string) $request->validated('document_date'),
+            approvalDate: $request->validated('approval_date') !== null ? (string) $request->validated('approval_date') : null,
+            requestDate: $request->validated('request_date') !== null ? (string) $request->validated('request_date') : null,
             file: $file,
             encodedBy: $request->user(),
         );
@@ -93,7 +85,7 @@ class DocumentController extends Controller
     /**
      * Update document metadata.
      */
-    public function update(Request $request, string $reference): JsonResponse
+    public function update(UpdateDocumentRequest $request, string $reference): JsonResponse
     {
         $document = $this->documentService->getDocumentByReference($reference);
 
@@ -103,24 +95,13 @@ class DocumentController extends Controller
 
         $this->authorize('update', $document);
 
-        $validated = $request->validate([
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-            'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
-            'storage_location_id' => ['nullable', 'integer', 'exists:storage_locations,id'],
-            'title' => ['nullable', 'string', 'max:255'],
-            'approval_date' => ['nullable', 'date'],
-            'request_date' => ['nullable', 'date'],
-            'remarks' => ['nullable', 'string'],
-        ]);
-
         $data = new UpdateDocumentData(
-            branchId: isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
-            requestTypeId: isset($validated['request_type_id']) ? (int) $validated['request_type_id'] : null,
-            storageLocationId: isset($validated['storage_location_id']) ? (int) $validated['storage_location_id'] : null,
-            title: isset($validated['title']) ? (string) $validated['title'] : null,
-            approvalDate: isset($validated['approval_date']) ? (string) $validated['approval_date'] : null,
-            requestDate: isset($validated['request_date']) ? (string) $validated['request_date'] : null,
-            remarks: isset($validated['remarks']) ? (string) $validated['remarks'] : null,
+            branchId: $request->validated('branch_id') !== null ? (int) $request->validated('branch_id') : null,
+            requestTypeId: $request->validated('request_type_id') !== null ? (int) $request->validated('request_type_id') : null,
+            storageLocationId: $request->validated('storage_location_id') !== null ? (int) $request->validated('storage_location_id') : null,
+            title: $request->validated('title') !== null ? (string) $request->validated('title') : null,
+            approvalDate: $request->validated('approval_date') !== null ? (string) $request->validated('approval_date') : null,
+            requestDate: $request->validated('request_date') !== null ? (string) $request->validated('request_date') : null,
             updatedBy: $request->user(),
         );
 
@@ -131,10 +112,10 @@ class DocumentController extends Controller
 
     /**
      * Update the document's physical location, sharing the same transfer
-     * model as a batch transfer (PLAN.md §6.9) — a single-document transfer
+     * model as a batch transfer (PLAN.md 6.9) -- a single-document transfer
      * is a batch of one.
      */
-    public function updateLocation(Request $request, string $reference): JsonResponse
+    public function updateLocation(UpdateDocumentLocationRequest $request, string $reference): JsonResponse
     {
         $document = $this->documentService->getDocumentByReference($reference);
 
@@ -144,15 +125,10 @@ class DocumentController extends Controller
 
         $this->authorize('updateLocation', $document);
 
-        $validated = $request->validate([
-            'to_storage_location_id' => ['required', 'integer', 'exists:storage_locations,id'],
-            'note' => ['nullable', 'string', 'max:1000'],
-        ]);
-
         $data = new CreateTransferData(
             references: [$reference],
-            toStorageLocationId: (int) $validated['to_storage_location_id'],
-            note: isset($validated['note']) ? (string) $validated['note'] : null,
+            toStorageLocationId: $request->toStorageLocationId(),
+            note: $request->note(),
             performedBy: $request->user(),
         );
 
@@ -184,7 +160,7 @@ class DocumentController extends Controller
     /**
      * Replace document PDF file scan.
      */
-    public function replaceFile(Request $request, string $reference): JsonResponse
+    public function replaceFile(ReplaceDocumentFileRequest $request, string $reference): JsonResponse
     {
         $document = $this->documentService->getDocumentByReference($reference);
 
@@ -193,10 +169,6 @@ class DocumentController extends Controller
         }
 
         $this->authorize('replaceFile', $document);
-
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
-        ]);
 
         /** @var UploadedFile $file */
         $file = $request->file('file');

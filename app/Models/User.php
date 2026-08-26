@@ -39,6 +39,13 @@ class User extends Authenticatable implements PasskeyUser
     use HasApiTokens, HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
+     * The roles a staff account can hold (PLAN.md section 6.4).
+     *
+     * @var array<int, string>
+     */
+    public const ROLES = ['viewer', 'editor', 'admin'];
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool

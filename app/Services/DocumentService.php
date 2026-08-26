@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Repositories\Interface\Document as DocumentRepositoryInterface;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\SvgWriter;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -32,6 +33,37 @@ class DocumentService
     public function getAllDocuments(): Collection
     {
         return $this->documentRepository->all();
+    }
+
+    /**
+     * Paginate documents for the archive browser.
+     *
+     * @param  array{query: string, branch_id: int|null, request_type_id: int|null, storage_location_id: int|null}  $filters
+     * @return LengthAwarePaginator<int, DocumentModel>
+     */
+    public function paginateDocuments(array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->documentRepository->paginateFiltered($filters, $perPage);
+    }
+
+    /**
+     * Every deletion request, pending ones first.
+     *
+     * @return Collection<int, DeletionRequest>
+     */
+    public function getDeletionRequests(): Collection
+    {
+        return $this->documentRepository->deletionRequests();
+    }
+
+    /**
+     * Counts for the dashboard tiles.
+     *
+     * @return array{documents: int, businesses: int, branches: int, request_types: int, pending_deletions: int, encoded_this_month: int, by_storage_location: array<int, array{name: string, total: int}>}
+     */
+    public function getDashboardStatistics(): array
+    {
+        return $this->documentRepository->dashboardStatistics();
     }
 
     /**

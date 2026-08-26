@@ -6,10 +6,14 @@ use App\DTOs\BulkSeedBusinessesData;
 use App\DTOs\CreateBusinessData;
 use App\DTOs\MergeBusinessData;
 use App\DTOs\UpdateBusinessData;
+use App\Http\Requests\Business\BulkSeedBusinessesRequest;
+use App\Http\Requests\Business\IndexBusinessRequest;
+use App\Http\Requests\Business\MergeBusinessRequest;
+use App\Http\Requests\Business\StoreBusinessRequest;
+use App\Http\Requests\Business\UpdateBusinessRequest;
 use App\Models\Business;
 use App\Services\BusinessService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -22,17 +26,18 @@ class BusinessController extends Controller
     /**
      * Display a listing of businesses.
      */
-    public function index(Request $request): InertiaResponse
+    public function index(IndexBusinessRequest $request): InertiaResponse
     {
-        $this->authorize('viewAny', Business::class);
-
-        $query = (string) $request->query('query', '');
-        $businesses = $this->businessService->searchBusinesses($query);
+        $query = $request->searchTerm();
 
         return Inertia::render('businesses/index', [
-            'businesses' => $businesses,
+            'businesses' => $this->businessService->searchBusinesses($query),
             'filters' => [
                 'query' => $query,
+            ],
+            'can' => [
+                'manage' => $request->user()?->can('create', Business::class) ?? false,
+                'merge' => $request->user()?->can('merge', Business::class) ?? false,
             ],
         ]);
     }
@@ -40,16 +45,10 @@ class BusinessController extends Controller
     /**
      * Store a newly created business in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreBusinessRequest $request): RedirectResponse
     {
-        $this->authorize('create', Business::class);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new CreateBusinessData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
         $this->businessService->createBusiness($data, $request->user());
@@ -60,16 +59,10 @@ class BusinessController extends Controller
     /**
      * Update the specified business in storage.
      */
-    public function update(Request $request, Business $business): RedirectResponse
+    public function update(UpdateBusinessRequest $request, Business $business): RedirectResponse
     {
-        $this->authorize('update', $business);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
-
         $data = new UpdateBusinessData(
-            name: (string) $validated['name'],
+            name: (string) $request->validated('name'),
         );
 
         $this->businessService->updateBusiness($business, $data, $request->user());
@@ -79,17 +72,12 @@ class BusinessController extends Controller
 
     /**
      * Bulk seed businesses (and optionally their branches) from a pre-launch
-     * or pilot-encoding list (PLAN.md §4.3, §6.2).
+     * or pilot-encoding list (PLAN.md 4.3, 6.2).
      */
-    public function bulkSeed(Request $request): RedirectResponse
+    public function bulkSeed(BulkSeedBusinessesRequest $request): RedirectResponse
     {
-        $this->authorize('create', Business::class);
-
-        $validated = $request->validate([
-            'rows' => ['required', 'array', 'min:1'],
-            'rows.*.name' => ['required', 'string', 'max:255'],
-            'rows.*.branch' => ['nullable', 'string', 'max:255'],
-        ]);
+        /** @var array<int, array{name: string, branch?: string|null}> $rows */
+        $rows = $request->validated('rows');
 
         $data = new BulkSeedBusinessesData(
             rows: array_map(
@@ -97,7 +85,7 @@ class BusinessController extends Controller
                     'name' => (string) $row['name'],
                     'branch' => isset($row['branch']) ? (string) $row['branch'] : null,
                 ],
-                $validated['rows'],
+                $rows,
             ),
         );
 
@@ -112,18 +100,11 @@ class BusinessController extends Controller
     /**
      * Merge a duplicate business into a target business.
      */
-    public function merge(Request $request): RedirectResponse
+    public function merge(MergeBusinessRequest $request): RedirectResponse
     {
-        $this->authorize('merge', Business::class);
-
-        $validated = $request->validate([
-            'source_id' => ['required', 'integer', 'exists:businesses,id'],
-            'target_id' => ['required', 'integer', 'exists:businesses,id', 'different:source_id'],
-        ]);
-
         $data = new MergeBusinessData(
-            sourceId: (int) $validated['source_id'],
-            targetId: (int) $validated['target_id'],
+            sourceId: (int) $request->validated('source_id'),
+            targetId: (int) $request->validated('target_id'),
         );
 
         $this->businessService->mergeBusinesses($data, $request->user());

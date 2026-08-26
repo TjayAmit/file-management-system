@@ -13,15 +13,24 @@ use App\Http\Controllers\Api\V1\TransferController as ApiTransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
-    Route::post('/auth/login', [ApiAuthController::class, 'login'])->name('api.v1.auth.login');
+    // Unauthenticated: credentials are the gate, and the app pings status
+    // before it has a token (PLAN.md 6.9).
+    Route::post('/auth/login', [ApiAuthController::class, 'login'])
+        ->middleware('throttle:6,1')
+        ->name('api.v1.auth.login');
 
     Route::get('/status', SystemStatusController::class)->name('api.v1.status');
-    Route::get('/businesses', [ApiBusinessController::class, 'index'])->name('api.v1.businesses.index');
-    Route::get('/branches', [ApiBranchController::class, 'index'])->name('api.v1.branches.index');
-    Route::get('/request-types', [ApiRequestTypeController::class, 'index'])->name('api.v1.request-types.index');
-    Route::get('/storage-locations', [ApiStorageLocationController::class, 'index'])->name('api.v1.storage-locations.index');
-    Route::get('/documents', [ApiDocumentController::class, 'index'])->name('api.v1.documents.index');
-    Route::get('/documents/{reference}', [ApiDocumentController::class, 'show'])->name('api.v1.documents.show');
+
+    // Reading the index is open to every staff account, but not to an
+    // anonymous device on the network (PLAN.md 3.5).
+    Route::middleware(['auth:sanctum'])->group(function (): void {
+        Route::get('/businesses', [ApiBusinessController::class, 'index'])->name('api.v1.businesses.index');
+        Route::get('/branches', [ApiBranchController::class, 'index'])->name('api.v1.branches.index');
+        Route::get('/request-types', [ApiRequestTypeController::class, 'index'])->name('api.v1.request-types.index');
+        Route::get('/storage-locations', [ApiStorageLocationController::class, 'index'])->name('api.v1.storage-locations.index');
+        Route::get('/documents', [ApiDocumentController::class, 'index'])->name('api.v1.documents.index');
+        Route::get('/documents/{reference}', [ApiDocumentController::class, 'show'])->name('api.v1.documents.show');
+    });
 
     Route::middleware(['auth:sanctum', 'role:editor,admin'])->group(function (): void {
         Route::post('/businesses', [ApiBusinessController::class, 'store'])->name('api.v1.businesses.store');
