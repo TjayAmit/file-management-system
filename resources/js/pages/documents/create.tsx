@@ -6,6 +6,7 @@ import PageHeader from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import documents from '@/routes/documents';
 
 type BusinessItem = { id: number; name: string };
@@ -17,9 +18,6 @@ type BranchItem = {
 };
 
 type Named = { id: number; name: string };
-
-const selectClass =
-    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30';
 
 export default function DocumentCreate({
     businesses,
@@ -79,7 +77,7 @@ export default function DocumentCreate({
                                     <Label htmlFor="business_filter">
                                         Business
                                     </Label>
-                                    <select
+                                    <NativeSelect
                                         id="business_filter"
                                         value={businessId}
                                         onChange={(event) =>
@@ -91,7 +89,6 @@ export default function DocumentCreate({
                                                       ),
                                             )
                                         }
-                                        className={selectClass}
                                     >
                                         <option value="">All businesses</option>
                                         {businesses.map((business) => (
@@ -102,7 +99,7 @@ export default function DocumentCreate({
                                                 {business.name}
                                             </option>
                                         ))}
-                                    </select>
+                                    </NativeSelect>
                                     <p className="text-xs text-muted-foreground">
                                         Picking a business narrows the branch
                                         list below.
@@ -113,12 +110,11 @@ export default function DocumentCreate({
                                     <Label htmlFor="branch_id">
                                         Branch (the filing unit)
                                     </Label>
-                                    <select
+                                    <NativeSelect
                                         id="branch_id"
                                         name="branch_id"
                                         required
                                         defaultValue={filters.branch_id ?? ''}
-                                        className={selectClass}
                                         aria-invalid={Boolean(errors.branch_id)}
                                     >
                                         <option value="" disabled>
@@ -134,7 +130,7 @@ export default function DocumentCreate({
                                                     : branch.location}
                                             </option>
                                         ))}
-                                    </select>
+                                    </NativeSelect>
                                     <InputError message={errors.branch_id} />
                                 </div>
 
@@ -142,12 +138,11 @@ export default function DocumentCreate({
                                     <Label htmlFor="request_type_id">
                                         Request type
                                     </Label>
-                                    <select
+                                    <NativeSelect
                                         id="request_type_id"
                                         name="request_type_id"
                                         required
                                         defaultValue=""
-                                        className={selectClass}
                                         aria-invalid={Boolean(
                                             errors.request_type_id,
                                         )}
@@ -163,7 +158,7 @@ export default function DocumentCreate({
                                                 {requestType.name}
                                             </option>
                                         ))}
-                                    </select>
+                                    </NativeSelect>
                                     <InputError
                                         message={errors.request_type_id}
                                     />
@@ -173,12 +168,11 @@ export default function DocumentCreate({
                                     <Label htmlFor="storage_location_id">
                                         Where the paper will be kept
                                     </Label>
-                                    <select
+                                    <NativeSelect
                                         id="storage_location_id"
                                         name="storage_location_id"
                                         required
                                         defaultValue=""
-                                        className={selectClass}
                                         aria-invalid={Boolean(
                                             errors.storage_location_id,
                                         )}
@@ -194,7 +188,7 @@ export default function DocumentCreate({
                                                 {location.name}
                                             </option>
                                         ))}
-                                    </select>
+                                    </NativeSelect>
                                     <InputError
                                         message={errors.storage_location_id}
                                     />

@@ -9,6 +9,7 @@ import TypeaheadInput from '@/components/typeahead-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import branches from '@/routes/branches';
 
 type BusinessItem = { id: number; name: string };
@@ -18,9 +19,6 @@ type BranchItem = {
     location: string;
     business?: BusinessItem | null;
 };
-
-const selectClass =
-    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30';
 
 export default function BranchIndex({
     branches: branchList,
@@ -77,10 +75,9 @@ export default function BranchIndex({
                                             <Label htmlFor="business_id">
                                                 Business
                                             </Label>
-                                            <select
+                                            <NativeSelect
                                                 id="business_id"
                                                 name="business_id"
-                                                className={selectClass}
                                             >
                                                 {businesses.map((business) => (
                                                     <option
@@ -90,7 +87,7 @@ export default function BranchIndex({
                                                         {business.name}
                                                     </option>
                                                 ))}
-                                            </select>
+                                            </NativeSelect>
                                             <InputError
                                                 message={errors.business_id}
                                             />
@@ -151,10 +148,9 @@ export default function BranchIndex({
                                                 <Label htmlFor="source_branch_id">
                                                     Duplicate
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="source_branch_id"
                                                     name="source_branch_id"
-                                                    className={selectClass}
                                                 >
                                                     {branchList.map(
                                                         (branch) => (
@@ -170,7 +166,7 @@ export default function BranchIndex({
                                                             </option>
                                                         ),
                                                     )}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={
                                                         errors.source_branch_id
@@ -181,10 +177,9 @@ export default function BranchIndex({
                                                 <Label htmlFor="target_branch_id">
                                                     Keep
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="target_branch_id"
                                                     name="target_branch_id"
-                                                    className={selectClass}
                                                 >
                                                     {branchList.map(
                                                         (branch) => (
@@ -200,7 +195,7 @@ export default function BranchIndex({
                                                             </option>
                                                         ),
                                                     )}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={
                                                         errors.target_branch_id
@@ -231,7 +226,7 @@ export default function BranchIndex({
                             <Label htmlFor="business_filter">
                                 Filter by business
                             </Label>
-                            <select
+                            <NativeSelect
                                 id="business_filter"
                                 value={filters.business_id ?? ''}
                                 onChange={(event) =>
@@ -246,7 +241,6 @@ export default function BranchIndex({
                                         { preserveState: true, replace: true },
                                     )
                                 }
-                                className={selectClass}
                             >
                                 <option value="">All businesses</option>
                                 {businesses.map((business) => (
@@ -257,7 +251,7 @@ export default function BranchIndex({
                                         {business.name}
                                     </option>
                                 ))}
-                            </select>
+                            </NativeSelect>
                         </div>
                     </header>
 
@@ -376,16 +370,13 @@ export default function BranchIndex({
                                                             >
                                                                 Move under
                                                             </Label>
-                                                            <select
+                                                            <NativeSelect
                                                                 id={`new_business_id-${branch.id}`}
                                                                 name="new_business_id"
                                                                 defaultValue={
                                                                     branch
                                                                         .business
                                                                         ?.id
-                                                                }
-                                                                className={
-                                                                    selectClass
                                                                 }
                                                             >
                                                                 {businesses.map(
@@ -406,7 +397,7 @@ export default function BranchIndex({
                                                                         </option>
                                                                     ),
                                                                 )}
-                                                            </select>
+                                                            </NativeSelect>
                                                             <InputError
                                                                 message={
                                                                     errors.new_business_id

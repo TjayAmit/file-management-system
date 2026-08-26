@@ -8,12 +8,10 @@ import PageHeader from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import requestTypes from '@/routes/request-types';
 
 type RequestTypeItem = { id: number; name: string };
-
-const selectClass =
-    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30';
 
 export default function RequestTypeIndex({
     requestTypes: typeList,
@@ -95,10 +93,9 @@ export default function RequestTypeIndex({
                                                 <Label htmlFor="source_request_type_id">
                                                     Duplicate
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="source_request_type_id"
                                                     name="source_request_type_id"
-                                                    className={selectClass}
                                                 >
                                                     {typeList.map((type) => (
                                                         <option
@@ -108,7 +105,7 @@ export default function RequestTypeIndex({
                                                             {type.name}
                                                         </option>
                                                     ))}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={
                                                         errors.source_request_type_id
@@ -119,10 +116,9 @@ export default function RequestTypeIndex({
                                                 <Label htmlFor="target_request_type_id">
                                                     Keep
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="target_request_type_id"
                                                     name="target_request_type_id"
-                                                    className={selectClass}
                                                 >
                                                     {typeList.map((type) => (
                                                         <option
@@ -132,7 +128,7 @@ export default function RequestTypeIndex({
                                                             {type.name}
                                                         </option>
                                                     ))}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={
                                                         errors.target_request_type_id

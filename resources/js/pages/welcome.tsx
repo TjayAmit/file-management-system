@@ -337,7 +337,7 @@ export default function Welcome() {
                                 </div>
 
                                 {/* Floating location chip */}
-                                <div className="absolute -bottom-6 -left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-lg sm:-left-8">
+                                <div className="absolute -bottom-10 left-2 w-60 rounded-lg border border-border bg-card p-3 shadow-lg sm:-left-8">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="size-4 text-muted-foreground" />
                                         <span className="truncate text-xs font-medium">

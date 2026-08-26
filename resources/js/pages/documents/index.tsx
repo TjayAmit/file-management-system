@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { FileText, Filter, Plus, X } from 'lucide-react';
+import { FileText, Filter, MapPin, Plus, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import EmptyState from '@/components/empty-state';
@@ -7,10 +7,11 @@ import FlashMessage from '@/components/flash-message';
 import PageHeader from '@/components/page-header';
 import type { Paginated } from '@/components/paginator';
 import Paginator from '@/components/paginator';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
     Table,
     TableBody,
@@ -148,7 +149,7 @@ export default function DocumentIndex({
 
                         <div className="grid gap-1.5">
                             <Label htmlFor="branch_id">Branch</Label>
-                            <select
+                            <NativeSelect
                                 id="branch_id"
                                 value={filters.branch_id ?? ''}
                                 onChange={(event) =>
@@ -156,7 +157,6 @@ export default function DocumentIndex({
                                         branch_id: event.target.value || null,
                                     })
                                 }
-                                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                             >
                                 <option value="">All branches</option>
                                 {branches.map((branch) => (
@@ -166,14 +166,14 @@ export default function DocumentIndex({
                                             : branch.location}
                                     </option>
                                 ))}
-                            </select>
+                            </NativeSelect>
                         </div>
 
                         <div className="grid gap-1.5">
                             <Label htmlFor="request_type_id">
                                 Request type
                             </Label>
-                            <select
+                            <NativeSelect
                                 id="request_type_id"
                                 value={filters.request_type_id ?? ''}
                                 onChange={(event) =>
@@ -182,7 +182,6 @@ export default function DocumentIndex({
                                             event.target.value || null,
                                     })
                                 }
-                                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                             >
                                 <option value="">All types</option>
                                 {requestTypes.map((type) => (
@@ -190,14 +189,14 @@ export default function DocumentIndex({
                                         {type.name}
                                     </option>
                                 ))}
-                            </select>
+                            </NativeSelect>
                         </div>
 
                         <div className="grid gap-1.5">
                             <Label htmlFor="storage_location_id">
                                 Physical location
                             </Label>
-                            <select
+                            <NativeSelect
                                 id="storage_location_id"
                                 value={filters.storage_location_id ?? ''}
                                 onChange={(event) =>
@@ -206,7 +205,6 @@ export default function DocumentIndex({
                                             event.target.value || null,
                                     })
                                 }
-                                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                             >
                                 <option value="">Anywhere</option>
                                 {storageLocations.map((location) => (
@@ -217,7 +215,7 @@ export default function DocumentIndex({
                                         {location.name}
                                     </option>
                                 ))}
-                            </select>
+                            </NativeSelect>
                         </div>
 
                         <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
@@ -313,13 +311,18 @@ export default function DocumentIndex({
                                             {mainDate(row)}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge
-                                                variant="secondary"
-                                                className="rounded-full font-normal"
+                                            <StatusBadge
+                                                tone="info"
+                                                icon={
+                                                    <MapPin
+                                                        aria-hidden
+                                                        className="size-3"
+                                                    />
+                                                }
                                             >
                                                 {row.storage_location?.name ??
                                                     'Unknown'}
-                                            </Badge>
+                                            </StatusBadge>
                                         </TableCell>
                                     </TableRow>
                                 ))}

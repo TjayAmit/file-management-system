@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import businesses from '@/routes/businesses';
 
@@ -20,9 +21,6 @@ type BusinessItem = {
     name: string;
     branches?: BranchItem[];
 };
-
-const selectClass =
-    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30';
 
 export default function BusinessIndex({
     businesses: businessList,
@@ -196,10 +194,9 @@ export default function BusinessIndex({
                                                 <Label htmlFor="source_id">
                                                     Duplicate
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="source_id"
                                                     name="source_id"
-                                                    className={selectClass}
                                                 >
                                                     {businessList.map(
                                                         (business) => (
@@ -215,7 +212,7 @@ export default function BusinessIndex({
                                                             </option>
                                                         ),
                                                     )}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={errors.source_id}
                                                 />
@@ -224,10 +221,9 @@ export default function BusinessIndex({
                                                 <Label htmlFor="target_id">
                                                     Keep
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="target_id"
                                                     name="target_id"
-                                                    className={selectClass}
                                                 >
                                                     {businessList.map(
                                                         (business) => (
@@ -243,7 +239,7 @@ export default function BusinessIndex({
                                                             </option>
                                                         ),
                                                     )}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={errors.target_id}
                                                 />

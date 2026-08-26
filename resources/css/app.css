@@ -41,6 +41,26 @@
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
 
+    /*
+     * Status colours. The archive has three-state search results, deletion
+     * requests that are pending / approved / rejected, and paper that is
+     * either in the office or across the city -- all of which read as
+     * identical grey without a semantic hue behind them.
+     */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-muted: var(--success-muted);
+
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning-muted: var(--warning-muted);
+
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-info-muted: var(--info-muted);
+
+    --color-destructive-muted: var(--destructive-muted);
+
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
@@ -61,75 +81,101 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * A restrained institutional blue. Enough hue that a primary button, an
+ * active nav item, and an icon chip register as deliberate; not so much
+ * that a records system starts looking like a consumer app.
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.995 0.002 250);
+    --foreground: oklch(0.18 0.012 250);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.18 0.012 250);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    --popover-foreground: oklch(0.18 0.012 250);
+    --primary: oklch(0.47 0.125 252);
+    --primary-foreground: oklch(0.99 0.002 250);
+    --secondary: oklch(0.965 0.005 250);
+    --secondary-foreground: oklch(0.28 0.02 252);
+    --muted: oklch(0.965 0.005 250);
+    --muted-foreground: oklch(0.52 0.015 250);
+    --accent: oklch(0.955 0.012 252);
+    --accent-foreground: oklch(0.3 0.04 252);
+    --destructive: oklch(0.55 0.2 25);
+    --destructive-foreground: oklch(0.99 0.002 250);
+    --destructive-muted: oklch(0.96 0.025 25);
+    --success: oklch(0.52 0.13 155);
+    --success-foreground: oklch(0.99 0.002 250);
+    --success-muted: oklch(0.955 0.04 155);
+    --warning: oklch(0.62 0.14 75);
+    --warning-foreground: oklch(0.2 0.03 75);
+    --warning-muted: oklch(0.96 0.05 85);
+    --info: oklch(0.55 0.11 235);
+    --info-foreground: oklch(0.99 0.002 250);
+    --info-muted: oklch(0.955 0.03 235);
+    --border: oklch(0.9 0.008 250);
+    --input: oklch(0.885 0.01 250);
+    --ring: oklch(0.47 0.125 252);
+    --chart-1: oklch(0.47 0.125 252);
+    --chart-2: oklch(0.52 0.13 155);
+    --chart-3: oklch(0.62 0.14 75);
+    --chart-4: oklch(0.55 0.16 300);
+    --chart-5: oklch(0.6 0.15 25);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --sidebar: oklch(0.975 0.006 250);
+    --sidebar-foreground: oklch(0.22 0.015 250);
+    --sidebar-primary: oklch(0.47 0.125 252);
+    --sidebar-primary-foreground: oklch(0.99 0.002 250);
+    --sidebar-accent: oklch(0.93 0.018 252);
+    --sidebar-accent-foreground: oklch(0.28 0.045 252);
+    --sidebar-border: oklch(0.9 0.008 250);
+    --sidebar-ring: oklch(0.47 0.125 252);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --background: oklch(0.16 0.012 254);
+    --foreground: oklch(0.96 0.004 250);
+    /* Lifted off the background so a panel reads as a panel. */
+    --card: oklch(0.205 0.014 254);
+    --card-foreground: oklch(0.96 0.004 250);
+    --popover: oklch(0.225 0.015 254);
+    --popover-foreground: oklch(0.96 0.004 250);
+    --primary: oklch(0.72 0.115 252);
+    --primary-foreground: oklch(0.17 0.03 254);
+    --secondary: oklch(0.27 0.016 254);
+    --secondary-foreground: oklch(0.94 0.006 250);
+    --muted: oklch(0.27 0.016 254);
+    --muted-foreground: oklch(0.7 0.014 250);
+    --accent: oklch(0.3 0.03 254);
+    --accent-foreground: oklch(0.95 0.008 250);
+    --destructive: oklch(0.62 0.19 25);
+    --destructive-foreground: oklch(0.98 0.005 25);
+    --destructive-muted: oklch(0.3 0.07 25);
+    --success: oklch(0.68 0.13 155);
+    --success-foreground: oklch(0.16 0.03 155);
+    --success-muted: oklch(0.28 0.06 155);
+    --warning: oklch(0.76 0.13 80);
+    --warning-foreground: oklch(0.18 0.04 80);
+    --warning-muted: oklch(0.3 0.06 80);
+    --info: oklch(0.7 0.1 235);
+    --info-foreground: oklch(0.16 0.03 235);
+    --info-muted: oklch(0.28 0.05 235);
+    --border: oklch(0.31 0.016 254);
+    --input: oklch(0.34 0.018 254);
+    --ring: oklch(0.72 0.115 252);
+    --chart-1: oklch(0.72 0.115 252);
+    --chart-2: oklch(0.68 0.13 155);
+    --chart-3: oklch(0.76 0.13 80);
+    --chart-4: oklch(0.7 0.15 300);
+    --chart-5: oklch(0.68 0.15 25);
+    --sidebar: oklch(0.185 0.013 254);
+    --sidebar-foreground: oklch(0.94 0.005 250);
+    --sidebar-primary: oklch(0.72 0.115 252);
+    --sidebar-primary-foreground: oklch(0.17 0.03 254);
+    --sidebar-accent: oklch(0.3 0.035 254);
+    --sidebar-accent-foreground: oklch(0.95 0.01 250);
+    --sidebar-border: oklch(0.29 0.015 254);
+    --sidebar-ring: oklch(0.72 0.115 252);
 }
 
 @layer base {
@@ -139,5 +185,47 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    /*
+     * A visible focus ring on every interactive element. Encoding is
+     * keyboard-heavy work and a clerk tabbing through a form needs to see
+     * where they are.
+     */
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-ring;
+    }
+
+    /* Numeric columns line up when digits share a width. */
+    .tabular-nums {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@layer utilities {
+    /*
+     * Keeps a skip link out of the way until it is focused.
+     */
+    .sr-only-focusable:not(:focus):not(:focus-within) {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

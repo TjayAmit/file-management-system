@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import transfers from '@/routes/transfers';
 
 type Named = { id: number; name: string };
@@ -41,9 +42,6 @@ type TransferRow = {
     performer?: { name: string } | null;
     items?: TransferItem[];
 };
-
-const selectClass =
-    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30';
 
 export default function TransferIndex({
     transfers: page,
@@ -152,10 +150,9 @@ export default function TransferIndex({
                                                 <Label htmlFor="to_storage_location_id">
                                                     Moving to
                                                 </Label>
-                                                <select
+                                                <NativeSelect
                                                     id="to_storage_location_id"
                                                     name="to_storage_location_id"
-                                                    className={selectClass}
                                                 >
                                                     {storageLocations.map(
                                                         (location) => (
@@ -171,7 +168,7 @@ export default function TransferIndex({
                                                             </option>
                                                         ),
                                                     )}
-                                                </select>
+                                                </NativeSelect>
                                                 <InputError
                                                     message={
                                                         errors.to_storage_location_id

@@ -115,7 +115,7 @@ export default function Dashboard({
                     />
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+                <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
                     <section className="rounded-xl border border-border bg-card">
                         <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
                             <div className="flex items-center gap-2.5">

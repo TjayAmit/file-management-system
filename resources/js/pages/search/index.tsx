@@ -2,20 +2,23 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Building2,
+    CircleCheck,
     CircleHelp,
     FileText,
     MapPin,
     Search as SearchIcon,
+    TriangleAlert,
     Upload,
 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import PageHeader from '@/components/page-header';
+import StatusBadge from '@/components/status-badge';
 import TypeaheadInput from '@/components/typeahead-input';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import documents from '@/routes/documents';
 import search from '@/routes/search';
 
@@ -56,29 +59,43 @@ type Filters = {
     location: string;
 };
 
+/**
+ * The three states a search can end in (PLAN.md 6.1), each carrying its own
+ * colour so the answer is legible before a word is read. There is no fourth,
+ * blank state: the system never tells staff a document does not exist.
+ */
 const stateCopy: Record<
     SearchState,
-    { title: string; body: string; tone: string }
+    {
+        title: string;
+        body: string;
+        panel: string;
+        chip: string;
+        icon: typeof CircleCheck;
+    }
 > = {
     found: {
-        title: 'Found — these are encoded',
+        title: 'Found',
         body: 'Open one to read it, print it, or see where the paper original is.',
-        tone: 'border-primary/30 bg-primary/5',
+        panel: 'border-success/30 bg-success-muted',
+        chip: 'bg-success/15 text-success',
+        icon: CircleCheck,
     },
     known_no_documents: {
-        title: 'Known business, nothing encoded yet',
+        title: 'Known business — nothing encoded yet',
         body: 'The business is real and its papers are physical. Go to the room or the central storage building — and scan it in while you are there.',
-        tone: 'border-amber-500/30 bg-amber-500/5',
+        panel: 'border-warning/35 bg-warning-muted',
+        chip: 'bg-warning/20 text-warning-foreground',
+        icon: TriangleAlert,
     },
     unknown: {
         title: 'Not in the known list',
         body: 'This is not a denial. The business may be older or inactive — check the ledger.',
-        tone: 'border-border bg-muted/40',
+        panel: 'border-border bg-muted/50',
+        chip: 'bg-foreground/10 text-muted-foreground',
+        icon: CircleHelp,
     },
 };
-
-const selectClass =
-    'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30';
 
 function documentLinkUrl(reference: string, searchLogId: number | null) {
     return documents.show.url(reference, {
@@ -113,7 +130,11 @@ export default function SearchIndex({
     const canUpload =
         auth.user?.role === 'editor' || auth.user?.role === 'admin';
 
-    const [business, setBusiness] = useState(filters.business);
+    // Searching by id leaves the typed query empty; show the business the
+    // search actually resolved to so the field still reflects the results.
+    const [business, setBusiness] = useState(
+        filters.business || (result?.business?.name ?? ''),
+    );
     const [businessId, setBusinessId] = useState<number | null>(
         filters.business_id,
     );
@@ -263,28 +284,55 @@ export default function SearchIndex({
 
                 {result && (
                     <section
-                        className={`rounded-xl border p-5 ${stateCopy[result.state].tone}`}
+                        aria-live="polite"
+                        className="overflow-hidden rounded-xl border border-border bg-card"
                     >
-                        <div className="flex items-start gap-3">
-                            <CircleHelp className="mt-0.5 size-5 shrink-0" />
-                            <div>
-                                <h2 className="font-semibold">
+                        {/*
+                         * The verdict gets the colour; the results underneath
+                         * stay on the card so a long list is still easy to
+                         * read.
+                         */}
+                        <div
+                            className={`flex items-start gap-3 border-b p-5 ${stateCopy[result.state].panel}`}
+                        >
+                            <span
+                                className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${stateCopy[result.state].chip}`}
+                            >
+                                {(() => {
+                                    const StateIcon =
+                                        stateCopy[result.state].icon;
+
+                                    return (
+                                        <StateIcon
+                                            aria-hidden
+                                            className="size-5"
+                                        />
+                                    );
+                                })()}
+                            </span>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium tracking-wide uppercase opacity-70">
                                     {stateCopy[result.state].title}
+                                </p>
+                                <h2 className="mt-0.5 truncate text-lg font-semibold">
+                                    {result.business?.name ??
+                                        filters.business ??
+                                        'This business'}
                                 </h2>
-                                <p className="mt-1 text-sm text-muted-foreground">
+                                <p className="mt-1 text-sm text-pretty text-muted-foreground">
                                     {stateCopy[result.state].body}
                                 </p>
                             </div>
                         </div>
 
                         {result.state === 'found' && (
-                            <>
-                                <div className="mt-4 flex flex-wrap gap-3">
+                            <div className="p-5">
+                                <div className="flex flex-wrap gap-3">
                                     <div className="grid gap-1.5">
                                         <Label htmlFor="branch_filter">
                                             Narrow to a branch
                                         </Label>
-                                        <select
+                                        <NativeSelect
                                             id="branch_filter"
                                             value={filters.branch_id ?? ''}
                                             onChange={(event) =>
@@ -293,7 +341,6 @@ export default function SearchIndex({
                                                     event.target.value,
                                                 )
                                             }
-                                            className={selectClass}
                                         >
                                             <option value="">
                                                 All branches
@@ -306,14 +353,14 @@ export default function SearchIndex({
                                                     {branch.location}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </NativeSelect>
                                     </div>
 
                                     <div className="grid gap-1.5">
                                         <Label htmlFor="type_filter">
                                             Narrow to a request type
                                         </Label>
-                                        <select
+                                        <NativeSelect
                                             id="type_filter"
                                             value={
                                                 filters.request_type_id ?? ''
@@ -324,7 +371,6 @@ export default function SearchIndex({
                                                     event.target.value,
                                                 )
                                             }
-                                            className={selectClass}
                                         >
                                             <option value="">All types</option>
                                             {requestTypes.map((type) => (
@@ -335,7 +381,7 @@ export default function SearchIndex({
                                                     {type.name}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </NativeSelect>
                                     </div>
                                 </div>
 
@@ -363,40 +409,53 @@ export default function SearchIndex({
                                                     </span>
                                                 </span>
                                                 <span className="flex shrink-0 items-center gap-2">
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="rounded-full font-normal"
+                                                    <StatusBadge
+                                                        tone="info"
+                                                        icon={
+                                                            <MapPin
+                                                                aria-hidden
+                                                                className="size-3"
+                                                            />
+                                                        }
                                                     >
                                                         {document
                                                             .storage_location
                                                             ?.name ?? 'Unknown'}
-                                                    </Badge>
+                                                    </StatusBadge>
                                                     <ArrowRight className="size-4 text-muted-foreground" />
                                                 </span>
                                             </Link>
                                         </li>
                                     ))}
                                 </ul>
-                            </>
+
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    Sorted by the document&rsquo;s own date —
+                                    approval first, request date where there is
+                                    no approval. Scroll to the year you want.
+                                </p>
+                            </div>
                         )}
 
                         {result.state !== 'found' && canUpload && (
-                            <Button asChild className="mt-4">
-                                <Link
-                                    href={documents.create.url({
-                                        query:
-                                            filters.branch_id !== null
-                                                ? {
-                                                      branch_id:
-                                                          filters.branch_id,
-                                                  }
-                                                : undefined,
-                                    })}
-                                >
-                                    <Upload />
-                                    Scan it in while you have it
-                                </Link>
-                            </Button>
+                            <div className="p-5">
+                                <Button asChild>
+                                    <Link
+                                        href={documents.create.url({
+                                            query:
+                                                filters.branch_id !== null
+                                                    ? {
+                                                          branch_id:
+                                                              filters.branch_id,
+                                                      }
+                                                    : undefined,
+                                        })}
+                                    >
+                                        <Upload />
+                                        Scan it in while you have it
+                                    </Link>
+                                </Button>
+                            </div>
                         )}
                     </section>
                 )}

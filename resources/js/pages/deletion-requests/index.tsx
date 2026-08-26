@@ -3,7 +3,8 @@ import { Check, Trash2, X } from 'lucide-react';
 import EmptyState from '@/components/empty-state';
 import FlashMessage from '@/components/flash-message';
 import PageHeader from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
+import type { StatusTone } from '@/components/status-badge';
+import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import deletionRequests from '@/routes/deletion-requests';
 import documents from '@/routes/documents';
@@ -26,10 +27,10 @@ type DeletionRequestRow = {
     approver?: { name: string } | null;
 };
 
-const statusStyles: Record<DeletionRequestRow['status'], string> = {
-    pending: 'bg-primary text-primary-foreground',
-    approved: 'bg-destructive text-white',
-    rejected: 'bg-muted text-muted-foreground',
+const statusTones: Record<DeletionRequestRow['status'], StatusTone> = {
+    pending: 'warning',
+    approved: 'danger',
+    rejected: 'neutral',
 };
 
 export default function DeletionRequestIndex({
@@ -103,11 +104,12 @@ export default function DeletionRequestIndex({
                                                     ?.location ?? 'no branch'}
                                             </p>
                                         </div>
-                                        <Badge
-                                            className={`shrink-0 rounded-full capitalize ${statusStyles[request.status]}`}
+                                        <StatusBadge
+                                            tone={statusTones[request.status]}
+                                            className="shrink-0 capitalize"
                                         >
                                             {request.status}
-                                        </Badge>
+                                        </StatusBadge>
                                     </div>
 
                                     <p className="mt-3 rounded-lg bg-muted/50 px-3 py-2 text-sm">

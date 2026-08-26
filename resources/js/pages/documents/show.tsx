@@ -4,6 +4,7 @@ import {
     Eye,
     FileText,
     History,
+    MapPin,
     Printer,
     QrCode,
     RotateCcw,
@@ -13,10 +14,11 @@ import {
 import FlashMessage from '@/components/flash-message';
 import InputError from '@/components/input-error';
 import PageHeader from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import documents from '@/routes/documents';
 
@@ -91,6 +93,42 @@ function formatBytes(bytes: number): string {
 
 function dateOnly(value: string | null): string {
     return value ? value.slice(0, 10) : '—';
+}
+
+/**
+ * Column names are how the database talks; this is how the office does.
+ */
+const fieldLabels: Record<string, string> = {
+    title: 'Title / subject',
+    branch_id: 'Branch',
+    request_type_id: 'Request type',
+    storage_location_id: 'Physical location',
+    approval_date: 'Approval date',
+    request_date: 'Request date',
+};
+
+function fieldLabel(field: string): string {
+    return (
+        fieldLabels[field] ??
+        field
+            .replace(/_id$/, '')
+            .replace(/_/g, ' ')
+            .replace(/^./, (c) => c.toUpperCase())
+    );
+}
+
+/**
+ * History values arrive as raw column values — a date column reads back as
+ * `2026-05-26 00:00:00`, which is noise in a change list.
+ */
+function historyValue(value: string | null): string {
+    if (value === null || value === '') {
+        return 'empty';
+    }
+
+    const midnightDate = /^(\d{4}-\d{2}-\d{2})[ T]00:00:00/.exec(value);
+
+    return midnightDate ? midnightDate[1] : value;
 }
 
 export default function DocumentShow({
@@ -257,9 +295,12 @@ export default function DocumentShow({
                             </p>
                         </header>
                         <div className="p-5">
-                            <Badge className="rounded-full">
+                            <StatusBadge
+                                tone="info"
+                                icon={<MapPin aria-hidden className="size-3" />}
+                            >
                                 {document.storage_location?.name ?? 'Unknown'}
-                            </Badge>
+                            </StatusBadge>
 
                             {can.update && (
                                 <Form
@@ -273,13 +314,12 @@ export default function DocumentShow({
                                             <Label htmlFor="storage_location_id">
                                                 Move it
                                             </Label>
-                                            <select
+                                            <NativeSelect
                                                 id="storage_location_id"
                                                 name="storage_location_id"
                                                 defaultValue={
                                                     document.storage_location_id
                                                 }
-                                                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                                             >
                                                 {storageLocations.map(
                                                     (location) => (
@@ -291,7 +331,7 @@ export default function DocumentShow({
                                                         </option>
                                                     ),
                                                 )}
-                                            </select>
+                                            </NativeSelect>
                                             <InputError
                                                 message={
                                                     errors.storage_location_id
@@ -343,11 +383,10 @@ export default function DocumentShow({
                                         <Label htmlFor="branch_id">
                                             Branch
                                         </Label>
-                                        <select
+                                        <NativeSelect
                                             id="branch_id"
                                             name="branch_id"
                                             defaultValue={document.branch_id}
-                                            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                                         >
                                             {branches.map((branch) => (
                                                 <option
@@ -359,7 +398,7 @@ export default function DocumentShow({
                                                         : branch.location}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </NativeSelect>
                                         <InputError
                                             message={errors.branch_id}
                                         />
@@ -369,13 +408,12 @@ export default function DocumentShow({
                                         <Label htmlFor="request_type_id">
                                             Request type
                                         </Label>
-                                        <select
+                                        <NativeSelect
                                             id="request_type_id"
                                             name="request_type_id"
                                             defaultValue={
                                                 document.request_type_id
                                             }
-                                            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                                         >
                                             {requestTypes.map((type) => (
                                                 <option
@@ -385,7 +423,7 @@ export default function DocumentShow({
                                                     {type.name}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </NativeSelect>
                                         <InputError
                                             message={errors.request_type_id}
                                         />
@@ -476,9 +514,12 @@ export default function DocumentShow({
                                         </p>
                                     </div>
                                     {version.is_current ? (
-                                        <Badge className="shrink-0 rounded-full">
+                                        <StatusBadge
+                                            tone="success"
+                                            className="shrink-0"
+                                        >
                                             Current
-                                        </Badge>
+                                        </StatusBadge>
                                     ) : (
                                         can.update && (
                                             <Form
@@ -560,14 +601,22 @@ export default function DocumentShow({
                                         >
                                             <div className="min-w-0 text-sm">
                                                 <p className="font-medium">
-                                                    {entry.field}
+                                                    {fieldLabel(entry.field)}
                                                 </p>
-                                                <p className="truncate text-xs text-muted-foreground">
-                                                    {entry.old_value ?? 'empty'}{' '}
+                                                <p className="mt-0.5 text-xs break-words text-muted-foreground">
+                                                    <span className="line-through decoration-muted-foreground/50">
+                                                        {historyValue(
+                                                            entry.old_value,
+                                                        )}
+                                                    </span>{' '}
                                                     &rarr;{' '}
-                                                    {entry.new_value ?? 'empty'}
+                                                    <span className="text-foreground">
+                                                        {historyValue(
+                                                            entry.new_value,
+                                                        )}
+                                                    </span>
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="mt-0.5 text-xs text-muted-foreground">
                                                     {entry.changed_by?.name ??
                                                         'Unknown'}
                                                 </p>
