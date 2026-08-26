@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Api;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\StrictFormRequest;
 
-class LoginRequest extends FormRequest
+class LoginRequest extends StrictFormRequest
 {
     /**
      * Anyone on the office network may attempt to authenticate; the

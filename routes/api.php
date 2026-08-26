@@ -32,7 +32,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/documents/{reference}', [ApiDocumentController::class, 'show'])->name('api.v1.documents.show');
     });
 
-    Route::middleware(['auth:sanctum', 'role:editor,admin'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'role:editor,admin', 'throttle:archive-writes'])->group(function (): void {
         Route::post('/businesses', [ApiBusinessController::class, 'store'])->name('api.v1.businesses.store');
         Route::patch('/businesses/{business}', [ApiBusinessController::class, 'update'])->name('api.v1.businesses.update');
         Route::post('/businesses/merge', [ApiBusinessController::class, 'merge'])->name('api.v1.businesses.merge');
@@ -46,11 +46,11 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/request-types/{requestType}', [ApiRequestTypeController::class, 'update'])->name('api.v1.request-types.update');
         Route::post('/request-types/merge', [ApiRequestTypeController::class, 'merge'])->name('api.v1.request-types.merge');
 
-        Route::post('/documents', [ApiDocumentController::class, 'store'])->name('api.v1.documents.store');
+        Route::post('/documents', [ApiDocumentController::class, 'store'])->middleware('throttle:uploads')->name('api.v1.documents.store');
         Route::patch('/documents/{reference}', [ApiDocumentController::class, 'update'])->name('api.v1.documents.update');
         Route::patch('/documents/{reference}/location', [ApiDocumentController::class, 'updateLocation'])->name('api.v1.documents.update-location');
         Route::post('/documents/{reference}/revert/{changeHistory}', [ApiDocumentController::class, 'revert'])->name('api.v1.documents.revert');
-        Route::post('/documents/{reference}/replace-file', [ApiDocumentController::class, 'replaceFile'])->name('api.v1.documents.replace-file');
+        Route::post('/documents/{reference}/replace-file', [ApiDocumentController::class, 'replaceFile'])->middleware('throttle:uploads')->name('api.v1.documents.replace-file');
         Route::post('/documents/{reference}/revert-file/{version}', [ApiDocumentController::class, 'revertFileVersion'])->name('api.v1.documents.revert-file');
 
         Route::post('/transfers', [ApiTransferController::class, 'store'])->name('api.v1.transfers.store');

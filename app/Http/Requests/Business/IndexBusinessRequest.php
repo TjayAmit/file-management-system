@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Business;
 
+use App\Http\Requests\StrictFormRequest;
 use App\Models\Business;
-use Illuminate\Foundation\Http\FormRequest;
 
-class IndexBusinessRequest extends FormRequest
+class IndexBusinessRequest extends StrictFormRequest
 {
     /**
      * Determine if the user is authorized to make this request.

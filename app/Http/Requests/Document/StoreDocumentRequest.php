@@ -2,11 +2,11 @@
 
 namespace App\Http\Requests\Document;
 
+use App\Http\Requests\StrictFormRequest;
 use App\Models\Document;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
-class StoreDocumentRequest extends FormRequest
+class StoreDocumentRequest extends StrictFormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -43,7 +43,7 @@ class StoreDocumentRequest extends FormRequest
     /**
      * Configure extra validation that spans several fields.
      */
-    public function withValidator(Validator $validator): void
+    protected function withStrictValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
             $approval = $this->input('approval_date');

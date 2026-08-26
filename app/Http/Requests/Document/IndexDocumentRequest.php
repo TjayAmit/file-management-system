@@ -2,11 +2,11 @@
 
 namespace App\Http\Requests\Document;
 
+use App\Http\Requests\StrictFormRequest;
 use App\Models\Document;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class IndexDocumentRequest extends FormRequest
+class IndexDocumentRequest extends StrictFormRequest
 {
     /**
      * Determine if the user is authorized to make this request.

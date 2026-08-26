@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Branch;
 
+use App\Http\Requests\StrictFormRequest;
 use App\Models\Branch;
-use Illuminate\Foundation\Http\FormRequest;
 
-class MergeBranchRequest extends FormRequest
+class MergeBranchRequest extends StrictFormRequest
 {
     /**
      * Determine if the user is authorized to make this request.

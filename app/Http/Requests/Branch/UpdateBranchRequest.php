@@ -3,10 +3,10 @@
 namespace App\Http\Requests\Branch;
 
 use App\Concerns\VocabularyValidationRules;
+use App\Http\Requests\StrictFormRequest;
 use App\Models\Branch;
-use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateBranchRequest extends FormRequest
+class UpdateBranchRequest extends StrictFormRequest
 {
     use VocabularyValidationRules;
 

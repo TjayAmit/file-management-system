@@ -3,10 +3,10 @@
 namespace App\Http\Requests\StorageLocation;
 
 use App\Concerns\VocabularyValidationRules;
+use App\Http\Requests\StrictFormRequest;
 use App\Models\StorageLocation;
-use Illuminate\Foundation\Http\FormRequest;
 
-class StoreStorageLocationRequest extends FormRequest
+class StoreStorageLocationRequest extends StrictFormRequest
 {
     use VocabularyValidationRules;
 

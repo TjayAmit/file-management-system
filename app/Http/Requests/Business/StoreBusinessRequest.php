@@ -3,10 +3,10 @@
 namespace App\Http\Requests\Business;
 
 use App\Concerns\VocabularyValidationRules;
+use App\Http\Requests\StrictFormRequest;
 use App\Models\Business;
-use Illuminate\Foundation\Http\FormRequest;
 
-class StoreBusinessRequest extends FormRequest
+class StoreBusinessRequest extends StrictFormRequest
 {
     use VocabularyValidationRules;
 

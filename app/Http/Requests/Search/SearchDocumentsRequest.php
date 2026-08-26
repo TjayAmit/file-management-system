@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Search;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\StrictFormRequest;
 
-class SearchDocumentsRequest extends FormRequest
+class SearchDocumentsRequest extends StrictFormRequest
 {
     /**
      * Viewing is open to every authenticated staff account (PLAN.md §3.5);

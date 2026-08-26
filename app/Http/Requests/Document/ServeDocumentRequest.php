@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Document;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\StrictFormRequest;
 use Illuminate\Validation\Rule;
 
-class ServeDocumentRequest extends FormRequest
+class ServeDocumentRequest extends StrictFormRequest
 {
     /**
      * Authorization is done in the controller, which resolves the document

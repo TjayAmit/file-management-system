@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Document;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\StrictFormRequest;
 
-class UpdateDocumentLocationRequest extends FormRequest
+class UpdateDocumentLocationRequest extends StrictFormRequest
 {
     /**
      * Authorization is done in the controller, which resolves the document

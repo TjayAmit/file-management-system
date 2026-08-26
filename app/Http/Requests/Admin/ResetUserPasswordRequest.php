@@ -3,10 +3,10 @@
 namespace App\Http\Requests\Admin;
 
 use App\Concerns\PasswordValidationRules;
+use App\Http\Requests\StrictFormRequest;
 use App\Models\User;
-use Illuminate\Foundation\Http\FormRequest;
 
-class ResetUserPasswordRequest extends FormRequest
+class ResetUserPasswordRequest extends StrictFormRequest
 {
     use PasswordValidationRules;
 

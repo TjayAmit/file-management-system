@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Concerns\ProfileValidationRules;
+use App\Http\Requests\StrictFormRequest;
 use App\Models\User;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateUserRequest extends FormRequest
+class UpdateUserRequest extends StrictFormRequest
 {
+    use ProfileValidationRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -27,16 +30,11 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         $user = $this->route('user');
+        $userId = $user instanceof User ? $user->id : null;
 
         return [
-            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
-            'email' => [
-                'sometimes',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email')->ignore($user instanceof User ? $user->id : null),
-            ],
+            'name' => ['sometimes', ...$this->nameRules()],
+            'email' => ['sometimes', ...$this->emailRules($userId)],
             'role' => ['sometimes', 'string', Rule::in(User::ROLES)],
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -52,7 +50,7 @@ class UpdateUserRequest extends FormRequest
 
         $this->merge(array_filter([
             'email' => is_string($email) ? mb_strtolower(trim($email)) : null,
-            'name' => is_string($name) ? trim($name) : null,
+            'name' => is_string($name) ? trim((string) preg_replace('/\s+/u', ' ', $name)) : null,
         ], fn ($value): bool => $value !== null));
     }
 
@@ -65,6 +63,7 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'email.unique' => 'Another account already uses this email address.',
+            'name.regex' => 'A name may only contain letters, spaces, and ordinary name punctuation.',
             'role.in' => 'Choose one of: viewer, editor, admin.',
         ];
     }

@@ -39,12 +39,24 @@ test('an unauthenticated device on the network cannot resolve a document', funct
     $this->getJson('/api/v1/businesses')->assertStatus(401);
 });
 
-test('resolving an unknown reference returns not found', function () {
+test('resolving a well-formed but unknown reference returns not found', function () {
     $response = $this->actingAs(User::factory()->viewer()->create(), 'sanctum')
-        ->getJson('/api/v1/documents/does-not-exist');
+        ->getJson('/api/v1/documents/00000000-0000-0000-0000-000000000000');
 
     $response->assertStatus(404)
         ->assertJson(['success' => false]);
+});
+
+test('a malformed reference is rejected by the router, before any controller', function () {
+    $viewer = User::factory()->viewer()->create();
+
+    $this->actingAs($viewer, 'sanctum')
+        ->getJson('/api/v1/documents/does-not-exist')
+        ->assertStatus(404);
+
+    $this->actingAs($viewer, 'sanctum')
+        ->getJson('/api/v1/documents/1%20OR%201=1')
+        ->assertStatus(404);
 });
 
 test('editor can update a document location via the api', function () {
@@ -114,7 +126,7 @@ test('updating the location of an unknown reference returns not found', function
     $editor = User::factory()->editor()->create();
     $storageLocation = StorageLocation::factory()->create();
 
-    $response = $this->actingAs($editor, 'sanctum')->patchJson('/api/v1/documents/does-not-exist/location', [
+    $response = $this->actingAs($editor, 'sanctum')->patchJson('/api/v1/documents/00000000-0000-0000-0000-000000000000/location', [
         'to_storage_location_id' => $storageLocation->id,
     ]);
 

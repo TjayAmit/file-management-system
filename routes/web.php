@@ -31,10 +31,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('/documents/create', [DocumentController::class, 'create'])->middleware('role:editor,admin')->name('documents.create');
     Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
-    Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->name('documents.file');
+    Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->middleware('throttle:document-serving')->name('documents.file');
     Route::get('/documents/{reference}/qr-code', [DocumentController::class, 'qrCode'])->name('documents.qr-code');
 
-    Route::middleware(['role:editor,admin'])->group(function () {
+    Route::middleware(['role:editor,admin', 'throttle:archive-writes'])->group(function () {
         Route::get('/deletion-requests', [DeletionRequestController::class, 'index'])->name('deletion-requests.index');
 
         Route::post('/businesses', [BusinessController::class, 'store'])->name('businesses.store');
@@ -51,10 +51,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/request-types/{requestType}', [RequestTypeController::class, 'update'])->name('request-types.update');
         Route::post('/request-types/merge', [RequestTypeController::class, 'merge'])->name('request-types.merge');
 
-        Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
+        Route::post('/documents', [DocumentController::class, 'store'])->middleware('throttle:uploads')->name('documents.store');
         Route::patch('/documents/{reference}', [DocumentController::class, 'update'])->name('documents.update');
         Route::post('/documents/{reference}/revert/{changeHistory}', [DocumentController::class, 'revert'])->name('documents.revert');
-        Route::post('/documents/{reference}/replace-file', [DocumentController::class, 'replaceFile'])->name('documents.replace-file');
+        Route::post('/documents/{reference}/replace-file', [DocumentController::class, 'replaceFile'])->middleware('throttle:uploads')->name('documents.replace-file');
         Route::post('/documents/{reference}/revert-file/{version}', [DocumentController::class, 'revertFileVersion'])->name('documents.revert-file');
         Route::post('/documents/{reference}/deletion-requests', [DocumentController::class, 'requestDeletion'])->name('documents.deletion-requests.store');
 
