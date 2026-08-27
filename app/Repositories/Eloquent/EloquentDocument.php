@@ -135,6 +135,28 @@ class EloquentDocument implements DocumentRepositoryInterface
     }
 
     /**
+     * Find several documents by their opaque references, for QR label printing.
+     *
+     * Ordered the way a stack of paper is worked through -- by business, then
+     * branch -- so the printed sheet matches the pile on the desk.
+     *
+     * @param  array<int, string>  $references
+     * @return Collection<int, DocumentModel>
+     */
+    public function findManyByReference(array $references): Collection
+    {
+        return DocumentModel::query()
+            ->whereIn('reference', $references)
+            ->with(['branch.business', 'requestType', 'storageLocation'])
+            ->get()
+            ->sortBy([
+                fn (DocumentModel $a, DocumentModel $b): int => $a->branch->business->name <=> $b->branch->business->name,
+                fn (DocumentModel $a, DocumentModel $b): int => $a->branch->location <=> $b->branch->location,
+            ])
+            ->values();
+    }
+
+    /**
      * Search documents narrowed by business, then optionally branch and request type.
      * Sorted by the operative date (approval date, falling back to request date).
      *
@@ -384,6 +406,44 @@ class EloquentDocument implements DocumentRepositoryInterface
             'document_id' => $document->id,
             'action' => $action,
         ]);
+    }
+
+    /**
+     * Paginate access-log entries for the admin review page.
+     *
+     * @param  array{action: string|null, user_id: int|null, reference: string|null}  $filters
+     * @return LengthAwarePaginator<int, AccessLog>
+     */
+    public function paginateAccessLogs(array $filters, int $perPage): LengthAwarePaginator
+    {
+        return AccessLog::query()
+            ->with(['user', 'document.branch.business'])
+            ->when($filters['action'], fn ($query, $action) => $query->where('action', $action))
+            ->when($filters['user_id'], fn ($query, $userId) => $query->where('user_id', $userId))
+            ->when($filters['reference'], fn ($query, $reference) => $query->whereHas(
+                'document',
+                fn ($document) => $document->where('reference', $reference),
+            ))
+            ->latest('created_at')
+            ->latest('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * The most recent access-log entries for one document, newest first.
+     *
+     * @return Collection<int, AccessLog>
+     */
+    public function accessLogsFor(DocumentModel $document, int $limit = 25): Collection
+    {
+        return AccessLog::query()
+            ->where('document_id', $document->id)
+            ->with('user')
+            ->latest('created_at')
+            ->latest('id')
+            ->limit($limit)
+            ->get();
     }
 
     /**

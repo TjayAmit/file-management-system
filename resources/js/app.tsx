@@ -12,7 +12,10 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
+            // The label sheet is a printed artifact, not a screen: sidebar
+            // and header would only end up on the paper.
             case name === 'welcome':
+            case name === 'documents/qr-labels':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

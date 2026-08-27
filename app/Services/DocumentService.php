@@ -6,6 +6,7 @@ use App\DTOs\CreateDocumentData;
 use App\DTOs\ReplaceDocumentFileData;
 use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
+use App\Models\AccessLog;
 use App\Models\ChangeHistory;
 use App\Models\DeletionRequest;
 use App\Models\Document as DocumentModel;
@@ -202,5 +203,64 @@ class DocumentService
         );
 
         return $result->getString();
+    }
+
+    /**
+     * The print-ready label sheet for a stack of documents (PLAN.md §3.4).
+     *
+     * A QR code is only useful once it is stuck to the paper, so the sheet
+     * carries the human-readable card beside each code: a clerk holding a
+     * cut label must be able to tell which document it belongs to without
+     * scanning anything.
+     *
+     * @param  array<int, string>  $references
+     * @return array<int, array{reference: string, title: string|null, business: string, branch: string, request_type: string, storage_location: string, main_date: string|null, qr: string}>
+     */
+    public function getQrLabels(array $references): array
+    {
+        return $this->documentRepository->findManyByReference($references)
+            ->map(fn (DocumentModel $document): array => [
+                'reference' => $document->reference,
+                'title' => $document->title,
+                'business' => $document->branch->business->name,
+                'branch' => $document->branch->location,
+                'request_type' => $document->requestType->name,
+                'storage_location' => $document->storageLocation->name,
+                'main_date' => ($document->approval_date ?? $document->request_date)?->toDateString(),
+                'qr' => $this->inlineQrCodeSvg($document),
+            ])
+            ->all();
+    }
+
+    /**
+     * Paginate access-log entries for the admin review page (PLAN.md §6.6).
+     *
+     * @param  array{action: string|null, user_id: int|null, reference: string|null}  $filters
+     * @return LengthAwarePaginator<int, AccessLog>
+     */
+    public function paginateAccessLogs(array $filters, int $perPage = 50): LengthAwarePaginator
+    {
+        return $this->documentRepository->paginateAccessLogs($filters, $perPage);
+    }
+
+    /**
+     * Who has opened one document, newest first.
+     *
+     * @return Collection<int, AccessLog>
+     */
+    public function getAccessLogsFor(DocumentModel $document, int $limit = 25): Collection
+    {
+        return $this->documentRepository->accessLogsFor($document, $limit);
+    }
+
+    /**
+     * The QR code as an SVG fragment that can be embedded in a page.
+     *
+     * The writer emits a standalone document with an XML prolog; that prolog
+     * is invalid inside HTML, so it is dropped here rather than in the view.
+     */
+    private function inlineQrCodeSvg(DocumentModel $document): string
+    {
+        return trim(preg_replace('/^<\?xml[^>]*\?>\s*/', '', $this->generateQrCodeSvg($document)) ?? '');
     }
 }

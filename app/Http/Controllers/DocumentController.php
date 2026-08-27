@@ -8,12 +8,14 @@ use App\DTOs\RequestDeletionData;
 use App\DTOs\UpdateDocumentData;
 use App\Http\Requests\Document\CreateDocumentRequest;
 use App\Http\Requests\Document\IndexDocumentRequest;
+use App\Http\Requests\Document\QrLabelsRequest;
 use App\Http\Requests\Document\ReplaceDocumentFileRequest;
 use App\Http\Requests\Document\RequestDeletionRequest;
 use App\Http\Requests\Document\ServeDocumentRequest;
 use App\Http\Requests\Document\ShowDocumentRequest;
 use App\Http\Requests\Document\StoreDocumentRequest;
 use App\Http\Requests\Document\UpdateDocumentRequest;
+use App\Models\AccessLog;
 use App\Models\ChangeHistory;
 use App\Models\Document;
 use App\Models\DocumentVersion;
@@ -87,16 +89,21 @@ class DocumentController extends Controller
             'deletionRequests.requester',
         ]);
 
+        $canSeeAccessLog = $request->user()?->can('viewAny', AccessLog::class) ?? false;
+
         return Inertia::render('documents/show', [
             'document' => $document,
             'storageLocations' => $this->storageLocationService->getAllStorageLocations(),
             'branches' => $this->branchService->getAllBranches(),
             'requestTypes' => $this->requestTypeService->getAllRequestTypes(),
+            'accessLogs' => $canSeeAccessLog ? $this->documentService->getAccessLogsFor($document) : null,
             'can' => [
                 'update' => $request->user()?->can('update', $document) ?? false,
                 'replaceFile' => $request->user()?->can('replaceFile', $document) ?? false,
                 'revert' => $request->user()?->can('revert', $document) ?? false,
                 'requestDeletion' => $request->user()?->can('requestDeletion', $document) ?? false,
+                'viewAccessLog' => $canSeeAccessLog,
+                'printLabel' => $request->user()?->can('create', Document::class) ?? false,
             ],
         ]);
     }
@@ -243,6 +250,20 @@ class DocumentController extends Controller
         $svg = $this->documentService->generateQrCodeSvg($document);
 
         return response($svg, 200, ['Content-Type' => 'image/svg+xml']);
+    }
+
+    /**
+     * Render a print-ready sheet of QR labels for one or many documents.
+     *
+     * A QR code only closes the location-tracking loop once it is stuck to
+     * the paper (PLAN.md §3.4), so the sheet is cut-and-tape ready and each
+     * label carries the card in plain text beside the code.
+     */
+    public function qrLabels(QrLabelsRequest $request): InertiaResponse
+    {
+        return Inertia::render('documents/qr-labels', [
+            'labels' => $this->documentService->getQrLabels($request->references()),
+        ]);
     }
 
     /**

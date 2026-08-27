@@ -2,23 +2,31 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Building2,
-    CircleCheck,
-    CircleHelp,
+    CheckCircle2,
+    FilePlus2,
     FileText,
+    HelpCircle,
     MapPin,
     Search as SearchIcon,
     TriangleAlert,
-    Upload,
 } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { ComponentType, FormEvent, SVGProps } from 'react';
 import { useState } from 'react';
+import PageContainer from '@/components/page-container';
 import PageHeader from '@/components/page-header';
+import {
+    SectionCard,
+    SectionCardBody,
+    SectionCardHeader,
+} from '@/components/section-card';
 import StatusBadge from '@/components/status-badge';
 import TypeaheadInput from '@/components/typeahead-input';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import { cn } from '@/lib/utils';
 import documents from '@/routes/documents';
 import search from '@/routes/search';
 
@@ -59,11 +67,6 @@ type Filters = {
     location: string;
 };
 
-/**
- * The three states a search can end in (PLAN.md 6.1), each carrying its own
- * colour so the answer is legible before a word is read. There is no fourth,
- * blank state: the system never tells staff a document does not exist.
- */
 const stateCopy: Record<
     SearchState,
     {
@@ -71,29 +74,33 @@ const stateCopy: Record<
         body: string;
         panel: string;
         chip: string;
-        icon: typeof CircleCheck;
+        icon: ComponentType<SVGProps<SVGSVGElement>>;
+        tone: 'success' | 'warning' | 'neutral';
     }
 > = {
     found: {
-        title: 'Found',
-        body: 'Open one to read it, print it, or see where the paper original is.',
-        panel: 'border-success/30 bg-success-muted',
-        chip: 'bg-success/15 text-success',
-        icon: CircleCheck,
+        title: 'Scans indexed and ready',
+        body: 'The documents below are already digitised. Open one to read, download, or print it without walking to storage.',
+        panel: 'border-success/35 bg-success-muted/50',
+        chip: 'bg-success/20 text-success',
+        icon: CheckCircle2,
+        tone: 'success',
     },
     known_no_documents: {
-        title: 'Known business — nothing encoded yet',
-        body: 'The business is real and its papers are physical. Go to the room or the central storage building — and scan it in while you are there.',
-        panel: 'border-warning/35 bg-warning-muted',
+        title: 'Known business — no scans indexed yet',
+        body: 'This business is registered, but its files are still only on paper in the storage archives. Fetch the paper, and scan it in while you have it in hand.',
+        panel: 'border-warning/40 bg-warning-muted/60',
         chip: 'bg-warning/20 text-warning-foreground',
         icon: TriangleAlert,
+        tone: 'warning',
     },
     unknown: {
-        title: 'Not in the known list',
-        body: 'This is not a denial. The business may be older or inactive — check the ledger.',
-        panel: 'border-border bg-muted/50',
+        title: 'Not in the registered index',
+        body: 'This is not a denial of existence. The business may be archived under an older ledger or an alternate spelling — try the address search instead.',
+        panel: 'border-border/80 bg-muted/40',
         chip: 'bg-foreground/10 text-muted-foreground',
-        icon: CircleHelp,
+        icon: HelpCircle,
+        tone: 'neutral',
     },
 };
 
@@ -107,6 +114,48 @@ function mainDate(document: DocumentItem): string {
     const date = document.approval_date ?? document.request_date;
 
     return date ? date.slice(0, 10) : 'No date';
+}
+
+function DocumentRow({
+    document,
+    searchLogId,
+}: {
+    document: DocumentItem;
+    searchLogId: number | null;
+}) {
+    return (
+        <Link
+            href={documentLinkUrl(document.reference, searchLogId)}
+            className="group flex items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-muted/40"
+        >
+            <div className="min-w-0 space-y-1">
+                <span className="block truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
+                    {document.title ?? 'Untitled document'}
+                </span>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="rounded bg-muted/80 px-1.5 py-0.5 font-mono text-[11px]">
+                        {document.reference.slice(0, 10)}
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span>
+                        {document.request_type?.name ?? 'General request'}
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span className="tabular-nums">{mainDate(document)}</span>
+                </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+                <StatusBadge
+                    tone="info"
+                    icon={<MapPin aria-hidden className="size-3" />}
+                    className="hidden sm:inline-flex"
+                >
+                    {document.storage_location?.name ?? 'Unknown location'}
+                </StatusBadge>
+                <ArrowRight className="size-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground" />
+            </div>
+        </Link>
+    );
 }
 
 export default function SearchIndex({
@@ -130,8 +179,6 @@ export default function SearchIndex({
     const canUpload =
         auth.user?.role === 'editor' || auth.user?.role === 'admin';
 
-    // Searching by id leaves the typed query empty; show the business the
-    // search actually resolved to so the field still reflects the results.
     const [business, setBusiness] = useState(
         filters.business || (result?.business?.name ?? ''),
     );
@@ -183,154 +230,146 @@ export default function SearchIndex({
         router.get(search.index.url(), { location }, { preserveState: true });
     }
 
+    const verdict = result ? stateCopy[result.state] : null;
+    const VerdictIcon = verdict?.icon;
+
     return (
         <>
-            <Head title="Search" />
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <Head title="Search Archive" />
+            <PageContainer>
                 <PageHeader
-                    title="Find a document"
-                    description="Start from the business a request is about — or from the address, when the building is known but the owner is not."
+                    title="Find a Document"
+                    icon={SearchIcon}
+                    description="Start from the business a request is about — or from the physical address, when the property is known but the owner is not."
                 />
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                    <section className="rounded-xl border border-border bg-card">
-                        <header className="flex items-center gap-2.5 border-b border-border px-5 py-4">
-                            <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                                <Building2 className="size-4" />
-                            </span>
-                            <div>
-                                <h2 className="font-semibold">
-                                    Search by business
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    The order already in the clerk&rsquo;s head.
-                                </p>
-                            </div>
-                        </header>
-                        <form
-                            onSubmit={searchByBusiness}
-                            className="grid gap-3 p-5"
-                        >
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="business">Business name</Label>
-                                <TypeaheadInput
-                                    id="business"
-                                    options={businesses.map((item) => ({
-                                        id: item.id,
-                                        label: item.name,
-                                    }))}
-                                    value={business}
-                                    selectedId={businessId}
-                                    onChange={setBusiness}
-                                    onSelect={(option) =>
-                                        setBusinessId(option?.id ?? null)
-                                    }
-                                    allowCreate={false}
-                                    placeholder="Start typing a business name"
-                                />
-                            </div>
-                            <Button
-                                type="submit"
-                                className="justify-self-start"
+                    <SectionCard>
+                        <SectionCardHeader
+                            title="Search by business"
+                            description="Primary lookup for registered businesses and corporations."
+                            icon={Building2}
+                        />
+                        <SectionCardBody>
+                            <form
+                                onSubmit={searchByBusiness}
+                                className="grid gap-4"
                             >
-                                <SearchIcon />
-                                Search
-                            </Button>
-                        </form>
-                    </section>
+                                <div className="grid gap-1.5">
+                                    <Label
+                                        htmlFor="business"
+                                        className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                                    >
+                                        Business name
+                                    </Label>
+                                    <TypeaheadInput
+                                        id="business"
+                                        options={businesses.map((item) => ({
+                                            id: item.id,
+                                            label: item.name,
+                                        }))}
+                                        value={business}
+                                        selectedId={businessId}
+                                        onChange={setBusiness}
+                                        onSelect={(option) =>
+                                            setBusinessId(option?.id ?? null)
+                                        }
+                                        allowCreate={false}
+                                        placeholder="Type a registered business name…"
+                                    />
+                                </div>
+                                <Button
+                                    type="submit"
+                                    className="justify-self-start"
+                                >
+                                    <SearchIcon className="size-4" />
+                                    Search business
+                                </Button>
+                            </form>
+                        </SectionCardBody>
+                    </SectionCard>
 
-                    <section className="rounded-xl border border-border bg-card">
-                        <header className="flex items-center gap-2.5 border-b border-border px-5 py-4">
-                            <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                                <MapPin className="size-4" />
-                            </span>
-                            <div>
-                                <h2 className="font-semibold">
-                                    Search by address
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    &ldquo;The building on Rizal St.&rdquo;
-                                </p>
-                            </div>
-                        </header>
-                        <form
-                            onSubmit={searchByLocation}
-                            className="grid gap-3 p-5"
-                        >
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="location">
-                                    Address or location
-                                </Label>
-                                <Input
-                                    id="location"
-                                    value={location}
-                                    onChange={(event) =>
-                                        setLocation(event.target.value)
-                                    }
-                                    placeholder="e.g. Rizal St"
-                                />
-                            </div>
-                            <Button
-                                type="submit"
-                                variant="outline"
-                                className="justify-self-start"
+                    <SectionCard>
+                        <SectionCardHeader
+                            title="Search by address"
+                            description="Secondary lookup for a street name or building landmark."
+                            icon={MapPin}
+                        />
+                        <SectionCardBody>
+                            <form
+                                onSubmit={searchByLocation}
+                                className="grid gap-4"
                             >
-                                <SearchIcon />
-                                Search by address
-                            </Button>
-                        </form>
-                    </section>
+                                <div className="grid gap-1.5">
+                                    <Label
+                                        htmlFor="location"
+                                        className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                                    >
+                                        Address or location keyword
+                                    </Label>
+                                    <Input
+                                        id="location"
+                                        value={location}
+                                        onChange={(event) =>
+                                            setLocation(event.target.value)
+                                        }
+                                        placeholder="e.g. Rizal St, Building 4, Annex…"
+                                        className="bg-card"
+                                    />
+                                </div>
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    className="justify-self-start"
+                                >
+                                    <SearchIcon className="size-4" />
+                                    Search by address
+                                </Button>
+                            </form>
+                        </SectionCardBody>
+                    </SectionCard>
                 </div>
 
-                {result && (
-                    <section
-                        aria-live="polite"
-                        className="overflow-hidden rounded-xl border border-border bg-card"
-                    >
-                        {/*
-                         * The verdict gets the colour; the results underneath
-                         * stay on the card so a long list is still easy to
-                         * read.
-                         */}
+                {result && verdict && VerdictIcon && (
+                    <SectionCard aria-live="polite" className="animate-rise">
                         <div
-                            className={`flex items-start gap-3 border-b p-5 ${stateCopy[result.state].panel}`}
+                            className={cn(
+                                'flex items-start gap-4 border-b px-5 py-5 sm:px-6',
+                                verdict.panel,
+                            )}
                         >
                             <span
-                                className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${stateCopy[result.state].chip}`}
+                                className={cn(
+                                    'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                                    verdict.chip,
+                                )}
                             >
-                                {(() => {
-                                    const StateIcon =
-                                        stateCopy[result.state].icon;
-
-                                    return (
-                                        <StateIcon
-                                            aria-hidden
-                                            className="size-5"
-                                        />
-                                    );
-                                })()}
+                                <VerdictIcon aria-hidden className="size-5" />
                             </span>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium tracking-wide uppercase opacity-70">
-                                    {stateCopy[result.state].title}
-                                </p>
-                                <h2 className="mt-0.5 truncate text-lg font-semibold">
+                            <div className="min-w-0 flex-1 space-y-1.5">
+                                <StatusBadge tone={verdict.tone} dot>
+                                    {verdict.title}
+                                </StatusBadge>
+                                <h2 className="truncate text-xl font-bold tracking-tight text-foreground">
                                     {result.business?.name ??
                                         filters.business ??
-                                        'This business'}
+                                        'Queried business'}
                                 </h2>
-                                <p className="mt-1 text-sm text-pretty text-muted-foreground">
-                                    {stateCopy[result.state].body}
+                                <p className="text-xs leading-relaxed text-pretty text-foreground/80">
+                                    {verdict.body}
                                 </p>
                             </div>
                         </div>
 
                         {result.state === 'found' && (
-                            <div className="p-5">
-                                <div className="flex flex-wrap gap-3">
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="branch_filter">
-                                            Narrow to a branch
+                            <SectionCardBody className="space-y-5">
+                                <div className="flex flex-wrap items-end gap-4 rounded-xl border border-border/80 bg-muted/20 p-4">
+                                    <div className="grid min-w-48 gap-1.5">
+                                        <Label
+                                            htmlFor="branch_filter"
+                                            className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Narrow branch
                                         </Label>
                                         <NativeSelect
                                             id="branch_filter"
@@ -341,9 +380,10 @@ export default function SearchIndex({
                                                     event.target.value,
                                                 )
                                             }
+                                            className="bg-card"
                                         >
                                             <option value="">
-                                                All branches
+                                                All branches ({branches.length})
                                             </option>
                                             {branches.map((branch) => (
                                                 <option
@@ -356,9 +396,12 @@ export default function SearchIndex({
                                         </NativeSelect>
                                     </div>
 
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="type_filter">
-                                            Narrow to a request type
+                                    <div className="grid min-w-48 gap-1.5">
+                                        <Label
+                                            htmlFor="type_filter"
+                                            className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                                        >
+                                            Narrow request type
                                         </Label>
                                         <NativeSelect
                                             id="type_filter"
@@ -371,8 +414,11 @@ export default function SearchIndex({
                                                     event.target.value,
                                                 )
                                             }
+                                            className="bg-card"
                                         >
-                                            <option value="">All types</option>
+                                            <option value="">
+                                                All request types
+                                            </option>
                                             {requestTypes.map((type) => (
                                                 <option
                                                     key={type.id}
@@ -383,62 +429,40 @@ export default function SearchIndex({
                                             ))}
                                         </NativeSelect>
                                     </div>
+
+                                    <p className="ml-auto self-end text-xs text-muted-foreground">
+                                        <span className="font-semibold text-foreground tabular-nums">
+                                            {result.documents.length}
+                                        </span>{' '}
+                                        matching record
+                                        {result.documents.length === 1
+                                            ? ''
+                                            : 's'}
+                                    </p>
                                 </div>
 
-                                <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-card">
+                                <ul className="stagger divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
                                     {result.documents.map((document) => (
                                         <li key={document.id}>
-                                            <Link
-                                                href={documentLinkUrl(
-                                                    document.reference,
-                                                    result.search_log_id,
-                                                )}
-                                                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50"
-                                            >
-                                                <span className="min-w-0">
-                                                    <span className="block truncate font-medium">
-                                                        {document.title ??
-                                                            'Untitled'}
-                                                    </span>
-                                                    <span className="block text-xs text-muted-foreground">
-                                                        {document.request_type
-                                                            ?.name ??
-                                                            'No type'}{' '}
-                                                        &middot;{' '}
-                                                        {mainDate(document)}
-                                                    </span>
-                                                </span>
-                                                <span className="flex shrink-0 items-center gap-2">
-                                                    <StatusBadge
-                                                        tone="info"
-                                                        icon={
-                                                            <MapPin
-                                                                aria-hidden
-                                                                className="size-3"
-                                                            />
-                                                        }
-                                                    >
-                                                        {document
-                                                            .storage_location
-                                                            ?.name ?? 'Unknown'}
-                                                    </StatusBadge>
-                                                    <ArrowRight className="size-4 text-muted-foreground" />
-                                                </span>
-                                            </Link>
+                                            <DocumentRow
+                                                document={document}
+                                                searchLogId={
+                                                    result.search_log_id
+                                                }
+                                            />
                                         </li>
                                     ))}
                                 </ul>
 
-                                <p className="mt-3 text-xs text-muted-foreground">
-                                    Sorted by the document&rsquo;s own date —
-                                    approval first, request date where there is
-                                    no approval. Scroll to the year you want.
+                                <p className="text-xs text-muted-foreground">
+                                    Sorted by document approval date, newest
+                                    first.
                                 </p>
-                            </div>
+                            </SectionCardBody>
                         )}
 
                         {result.state !== 'found' && canUpload && (
-                            <div className="p-5">
+                            <SectionCardBody className="border-t border-border/60 bg-muted/10">
                                 <Button asChild>
                                     <Link
                                         href={documents.create.url({
@@ -451,55 +475,67 @@ export default function SearchIndex({
                                                     : undefined,
                                         })}
                                     >
-                                        <Upload />
-                                        Scan it in while you have it
+                                        <FilePlus2 className="size-4" />
+                                        Scan and encode it now
                                     </Link>
                                 </Button>
-                            </div>
+                            </SectionCardBody>
                         )}
-                    </section>
+                    </SectionCard>
                 )}
 
                 {locationResults && (
-                    <section className="rounded-xl border border-border bg-card">
-                        <header className="border-b border-border px-5 py-4">
-                            <h2 className="font-semibold">
-                                Branches matching &ldquo;{filters.location}
-                                &rdquo;
-                            </h2>
-                        </header>
+                    <SectionCard className="animate-rise">
+                        <SectionCardHeader
+                            title={`Branches matching "${filters.location}"`}
+                            description="Every registered premises whose address contains the keyword."
+                            icon={MapPin}
+                            actions={
+                                <Badge
+                                    variant="secondary"
+                                    className="rounded-full"
+                                >
+                                    {locationResults.length} branch
+                                    {locationResults.length === 1 ? '' : 'es'}
+                                </Badge>
+                            }
+                        />
 
                         {locationResults.length === 0 ? (
-                            <p className="px-5 py-6 text-sm text-muted-foreground">
-                                No known branch matches this address — that is
-                                not a denial. Check the ledger.
+                            <p className="px-5 py-10 text-center text-sm text-muted-foreground sm:px-6">
+                                No registered branch matches this address. Check
+                                the physical records or the older ledgers.
                             </p>
                         ) : (
-                            <ul className="divide-y divide-border">
+                            <ul className="stagger divide-y divide-border/60">
                                 {locationResults.map((branch) => (
-                                    <li key={branch.id} className="px-5 py-4">
-                                        <div className="flex items-baseline justify-between gap-3">
-                                            <span className="font-medium">
+                                    <li
+                                        key={branch.id}
+                                        className="space-y-3 px-5 py-5 sm:px-6"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <span className="font-semibold text-foreground">
                                                 {branch.business.name}
                                             </span>
-                                            <span className="text-sm text-muted-foreground">
+                                            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                                <MapPin className="size-3" />
                                                 {branch.location}
                                             </span>
                                         </div>
 
                                         {branch.documents.length === 0 ? (
-                                            <div className="mt-2 text-sm text-muted-foreground">
+                                            <div className="space-y-2.5 rounded-xl border border-border/70 bg-muted/30 p-4 text-xs text-muted-foreground">
                                                 <p>
-                                                    Nothing encoded yet — go to
-                                                    the room or the storage
-                                                    building.
+                                                    No scans are encoded for
+                                                    this location yet — the
+                                                    files sit in physical
+                                                    archives.
                                                 </p>
                                                 {canUpload && (
                                                     <Button
                                                         asChild
                                                         variant="outline"
                                                         size="sm"
-                                                        className="mt-2"
                                                     >
                                                         <Link
                                                             href={documents.create.url(
@@ -511,14 +547,15 @@ export default function SearchIndex({
                                                                 },
                                                             )}
                                                         >
-                                                            <Upload />
-                                                            Scan it in
+                                                            <FilePlus2 className="size-3.5" />
+                                                            Encode a document
+                                                            here
                                                         </Link>
                                                     </Button>
                                                 )}
                                             </div>
                                         ) : (
-                                            <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                                            <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
                                                 {branch.documents.map(
                                                     (document) => (
                                                         <li key={document.id}>
@@ -527,16 +564,16 @@ export default function SearchIndex({
                                                                     document.reference,
                                                                     locationSearchLogId,
                                                                 )}
-                                                                className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-muted/50"
+                                                                className="group flex items-center justify-between gap-3 px-4 py-3 text-xs transition-colors hover:bg-muted/40"
                                                             >
                                                                 <span className="flex min-w-0 items-center gap-2">
-                                                                    <FileText className="size-4 shrink-0 text-muted-foreground" />
-                                                                    <span className="truncate">
+                                                                    <FileText className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                                                                    <span className="truncate font-medium text-foreground">
                                                                         {document.title ??
-                                                                            'Untitled'}
+                                                                            'Untitled document'}
                                                                     </span>
                                                                 </span>
-                                                                <span className="shrink-0 text-xs text-muted-foreground">
+                                                                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                                                                     {mainDate(
                                                                         document,
                                                                     )}
@@ -551,9 +588,9 @@ export default function SearchIndex({
                                 ))}
                             </ul>
                         )}
-                    </section>
+                    </SectionCard>
                 )}
-            </div>
+            </PageContainer>
         </>
     );
 }

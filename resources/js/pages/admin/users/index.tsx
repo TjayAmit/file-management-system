@@ -1,14 +1,38 @@
-import { Form, Head } from '@inertiajs/react';
-import { KeyRound, ShieldCheck, UserPlus, UserX } from 'lucide-react';
-import { useState } from 'react';
-import FlashMessage from '@/components/flash-message';
-import InputError from '@/components/input-error';
+import { Head } from '@inertiajs/react';
+import {
+    Check,
+    Eye,
+    FileEdit,
+    KeyRound,
+    Pencil,
+    Shield,
+    ShieldCheck,
+    UserPlus,
+    Users,
+    UserX,
+} from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
+import Callout from '@/components/callout';
+import ConfirmDialog from '@/components/confirm-dialog';
+import FormDialog from '@/components/form-dialog';
+import FormField from '@/components/form-field';
+import PageContainer from '@/components/page-container';
 import PageHeader from '@/components/page-header';
+import { SectionCard, SectionCardHeader } from '@/components/section-card';
+import type { StatusTone } from '@/components/status-badge';
+import StatusBadge from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import admin from '@/routes/admin';
 
 type UserItem = {
@@ -19,11 +43,84 @@ type UserItem = {
     is_active: boolean;
 };
 
-const roleCopy: Record<string, string> = {
-    viewer: 'Reads and prints. Changes nothing.',
-    editor: 'Encodes, corrects, and moves paper.',
-    admin: 'Runs the office: accounts, deletions, reports.',
+type RoleInfo = {
+    title: string;
+    description: string;
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
+    tone: StatusTone;
 };
+
+const roleInfo: Record<string, RoleInfo> = {
+    viewer: {
+        title: 'Viewer',
+        description:
+            'Search, read, and print scans. Cannot edit metadata or relocate files.',
+        icon: Eye,
+        tone: 'neutral',
+    },
+    editor: {
+        title: 'Editor',
+        description:
+            'Encode new documents, correct metadata, replace scans, and stage batch moves.',
+        icon: FileEdit,
+        tone: 'info',
+    },
+    admin: {
+        title: 'Administrator',
+        description:
+            'Provision staff, approve permanent deletions, and manage facilities.',
+        icon: ShieldCheck,
+        tone: 'primary',
+    },
+};
+
+function infoFor(role: string): RoleInfo {
+    return (
+        roleInfo[role] ?? {
+            title: role,
+            description: 'Authorised municipal staff member.',
+            icon: Shield,
+            tone: 'primary',
+        }
+    );
+}
+
+function titleCase(value: string): string {
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function RoleSelect({
+    name,
+    roles,
+    defaultValue,
+    id,
+    describedBy,
+    invalid,
+}: {
+    name: string;
+    roles: string[];
+    defaultValue?: string;
+    id: string;
+    describedBy?: string;
+    invalid?: boolean;
+}) {
+    return (
+        <NativeSelect
+            id={id}
+            name={name}
+            defaultValue={defaultValue}
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            className="bg-card"
+        >
+            {roles.map((role) => (
+                <option key={role} value={role}>
+                    {titleCase(role)}
+                </option>
+            ))}
+        </NativeSelect>
+    );
+}
 
 export default function UserIndex({
     users,
@@ -32,356 +129,447 @@ export default function UserIndex({
     users: UserItem[];
     roles: string[];
 }) {
-    const [panel, setPanel] = useState<{
-        id: number;
-        kind: 'edit' | 'password';
-    } | null>(null);
+    const activeCount = users.filter((user) => user.is_active).length;
 
     return (
         <>
-            <Head title="Users" />
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <Head title="Staff Accounts" />
+            <PageContainer>
                 <PageHeader
-                    title="Staff accounts"
-                    description="There is no self-registration. Every account is provisioned here, so access is always intentional."
+                    title="Staff & Access"
+                    icon={Users}
+                    description="Self-registration is deliberately disabled. Every account is provisioned by an administrator, which is what makes the audit log a chain of custody rather than a list of guesses."
+                    badge={
+                        <Badge variant="secondary" className="rounded-full">
+                            {activeCount} active of {users.length}
+                        </Badge>
+                    }
+                    actions={
+                        <FormDialog
+                            trigger={
+                                <Button>
+                                    <UserPlus className="size-4" />
+                                    Provision account
+                                </Button>
+                            }
+                            title="Provision new staff account"
+                            description="Hand the temporary password over in person — it is shown here in the clear precisely once."
+                            icon={UserPlus}
+                            form={admin.users.store.form()}
+                            submitLabel="Provision account"
+                            submitIcon={UserPlus}
+                            size="md"
+                            resetOnSuccess
+                        >
+                            {({ errors }) => (
+                                <>
+                                    <FormField
+                                        label="Full name"
+                                        error={errors.name}
+                                        required
+                                    >
+                                        {({ id, describedBy, invalid }) => (
+                                            <Input
+                                                id={id}
+                                                name="name"
+                                                autoFocus
+                                                aria-describedby={describedBy}
+                                                aria-invalid={invalid}
+                                                placeholder="e.g. Maria Santos"
+                                                className="bg-card"
+                                            />
+                                        )}
+                                    </FormField>
+
+                                    <FormField
+                                        label="Email address"
+                                        error={errors.email}
+                                        required
+                                    >
+                                        {({ id, describedBy, invalid }) => (
+                                            <Input
+                                                id={id}
+                                                name="email"
+                                                type="email"
+                                                aria-describedby={describedBy}
+                                                aria-invalid={invalid}
+                                                placeholder="e.g. msantos@city.gov"
+                                                className="bg-card"
+                                            />
+                                        )}
+                                    </FormField>
+
+                                    <FormField
+                                        label="Temporary password"
+                                        error={errors.password}
+                                        required
+                                        hint="At least 8 characters. The holder should change it on first sign-in."
+                                    >
+                                        {({ id, describedBy, invalid }) => (
+                                            <Input
+                                                id={id}
+                                                name="password"
+                                                type="text"
+                                                autoComplete="off"
+                                                aria-describedby={describedBy}
+                                                aria-invalid={invalid}
+                                                className="bg-card font-mono"
+                                            />
+                                        )}
+                                    </FormField>
+
+                                    <FormField
+                                        label="Assigned role"
+                                        error={errors.role}
+                                        required
+                                        hint="Start at the least privilege the work needs; roles are easy to raise later."
+                                    >
+                                        {({ id, describedBy, invalid }) => (
+                                            <RoleSelect
+                                                id={id}
+                                                name="role"
+                                                roles={roles}
+                                                defaultValue="viewer"
+                                                describedBy={describedBy}
+                                                invalid={invalid}
+                                            />
+                                        )}
+                                    </FormField>
+                                </>
+                            )}
+                        </FormDialog>
+                    }
                 />
 
-                <FlashMessage />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {roles.map((role) => {
+                        const info = infoFor(role);
+                        const Icon = info.icon;
+                        const count = users.filter(
+                            (user) => user.role === role,
+                        ).length;
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                    {roles.map((role) => (
-                        <div
-                            key={role}
-                            className="rounded-xl border border-border bg-card p-5"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                                    <ShieldCheck className="size-4" />
+                        return (
+                            <div
+                                key={role}
+                                className="animate-rise flex min-w-0 items-start gap-3 rounded-2xl border border-border bg-card p-5 shadow-2xs"
+                            >
+                                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                                    <Icon className="size-4.5" />
                                 </span>
-                                <h2 className="font-semibold capitalize">
-                                    {role}
-                                </h2>
+                                <div className="min-w-0 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="font-semibold text-foreground">
+                                            {info.title}
+                                        </h2>
+                                        <StatusBadge tone={info.tone}>
+                                            {count}
+                                        </StatusBadge>
+                                    </div>
+                                    <p className="text-xs leading-relaxed text-pretty text-muted-foreground">
+                                        {info.description}
+                                    </p>
+                                </div>
                             </div>
-                            <p className="mt-3 text-sm text-muted-foreground">
-                                {roleCopy[role] ?? ''}
-                            </p>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
-                <section className="rounded-xl border border-border bg-card">
-                    <header className="border-b border-border px-5 py-4">
-                        <h2 className="font-semibold">Create an account</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Set a strong temporary password and hand it over in
-                            person.
-                        </p>
-                    </header>
-                    <Form
-                        {...admin.users.store.form()}
-                        resetOnSuccess
-                        className="grid gap-4 p-5 sm:grid-cols-2"
-                    >
-                        {({ processing, errors }) => (
-                            <>
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="name">Full name</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        aria-invalid={Boolean(errors.name)}
-                                    />
-                                    <InputError message={errors.name} />
-                                </div>
+                <SectionCard>
+                    <SectionCardHeader
+                        title="Staff directory"
+                        description="Deactivated accounts keep their history; they simply cannot sign in."
+                        icon={Users}
+                    />
 
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        aria-invalid={Boolean(errors.email)}
-                                    />
-                                    <InputError message={errors.email} />
-                                </div>
-
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="password">
-                                        Temporary password
-                                    </Label>
-                                    <Input
-                                        id="password"
-                                        name="password"
-                                        type="text"
-                                        autoComplete="off"
-                                        aria-invalid={Boolean(errors.password)}
-                                    />
-                                    <InputError message={errors.password} />
-                                </div>
-
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="role">Role</Label>
-                                    <NativeSelect
-                                        id="role"
-                                        name="role"
-                                        defaultValue="viewer"
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-muted/30">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="min-w-64 px-5 text-xs font-semibold tracking-wide text-muted-foreground uppercase sm:px-6">
+                                        Staff member
+                                    </TableHead>
+                                    <TableHead className="min-w-32 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                        Role
+                                    </TableHead>
+                                    <TableHead className="min-w-28 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                        Status
+                                    </TableHead>
+                                    <TableHead className="w-72 px-5 text-right text-xs font-semibold tracking-wide text-muted-foreground uppercase sm:px-6">
+                                        Actions
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="stagger">
+                                {users.map((user) => (
+                                    <TableRow
+                                        key={user.id}
+                                        className="border-border/60 transition-colors hover:bg-muted/40"
                                     >
-                                        {roles.map((role) => (
-                                            <option key={role} value={role}>
-                                                {role}
-                                            </option>
-                                        ))}
-                                    </NativeSelect>
-                                    <InputError message={errors.role} />
-                                </div>
-
-                                <div className="sm:col-span-2">
-                                    <Button type="submit" disabled={processing}>
-                                        <UserPlus />
-                                        Create account
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </Form>
-                </section>
-
-                <section className="rounded-xl border border-border bg-card">
-                    <header className="border-b border-border px-5 py-4">
-                        <h2 className="font-semibold">Accounts</h2>
-                    </header>
-                    <ul className="divide-y divide-border">
-                        {users.map((user) => (
-                            <li key={user.id} className="px-5 py-4">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <p className="truncate font-medium">
-                                            {user.name}
-                                        </p>
-                                        <p className="truncate text-sm text-muted-foreground">
-                                            {user.email}
-                                        </p>
-                                    </div>
-                                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                                        <Badge className="rounded-full capitalize">
-                                            {user.role}
-                                        </Badge>
-                                        {!user.is_active && (
-                                            <Badge
-                                                variant="secondary"
-                                                className="rounded-full"
+                                        <TableCell className="px-5 py-3.5 sm:px-6">
+                                            <div className="min-w-0 space-y-0.5">
+                                                <p className="truncate font-medium text-foreground">
+                                                    {user.name}
+                                                </p>
+                                                <p className="truncate font-mono text-xs text-muted-foreground">
+                                                    {user.email}
+                                                </p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                tone={infoFor(user.role).tone}
+                                                className="capitalize"
                                             >
-                                                Deactivated
-                                            </Badge>
-                                        )}
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setPanel(
-                                                    panel?.id === user.id &&
-                                                        panel.kind === 'edit'
-                                                        ? null
-                                                        : {
-                                                              id: user.id,
-                                                              kind: 'edit',
-                                                          },
-                                                )
-                                            }
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setPanel(
-                                                    panel?.id === user.id &&
-                                                        panel.kind ===
-                                                            'password'
-                                                        ? null
-                                                        : {
-                                                              id: user.id,
-                                                              kind: 'password',
-                                                          },
-                                                )
-                                            }
-                                        >
-                                            <KeyRound />
-                                            Reset password
-                                        </Button>
-                                        {user.is_active && (
-                                            <Form
-                                                {...admin.users.deactivate.form(
-                                                    user.id,
-                                                )}
-                                            >
-                                                {({ processing }) => (
-                                                    <Button
-                                                        type="submit"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={processing}
-                                                    >
-                                                        <UserX />
-                                                        Deactivate
-                                                    </Button>
-                                                )}
-                                            </Form>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {panel?.id === user.id &&
-                                    panel.kind === 'edit' && (
-                                        <Form
-                                            {...admin.users.update.form(
-                                                user.id,
+                                                {user.role}
+                                            </StatusBadge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.is_active ? (
+                                                <StatusBadge tone="success" dot>
+                                                    Active
+                                                </StatusBadge>
+                                            ) : (
+                                                <StatusBadge tone="danger" dot>
+                                                    Deactivated
+                                                </StatusBadge>
                                             )}
-                                            onSuccess={() => setPanel(null)}
-                                            className="mt-4 grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-3"
-                                        >
-                                            {({ processing, errors }) => (
-                                                <>
-                                                    <div className="grid gap-1.5">
-                                                        <Label
-                                                            htmlFor={`name-${user.id}`}
-                                                        >
-                                                            Name
-                                                        </Label>
-                                                        <Input
-                                                            id={`name-${user.id}`}
-                                                            name="name"
-                                                            defaultValue={
-                                                                user.name
-                                                            }
-                                                        />
-                                                        <InputError
-                                                            message={
-                                                                errors.name
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="grid gap-1.5">
-                                                        <Label
-                                                            htmlFor={`email-${user.id}`}
-                                                        >
-                                                            Email
-                                                        </Label>
-                                                        <Input
-                                                            id={`email-${user.id}`}
-                                                            name="email"
-                                                            type="email"
-                                                            defaultValue={
-                                                                user.email
-                                                            }
-                                                        />
-                                                        <InputError
-                                                            message={
-                                                                errors.email
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="grid gap-1.5">
-                                                        <Label
-                                                            htmlFor={`role-${user.id}`}
-                                                        >
-                                                            Role
-                                                        </Label>
-                                                        <NativeSelect
-                                                            id={`role-${user.id}`}
-                                                            name="role"
-                                                            defaultValue={
-                                                                user.role
-                                                            }
-                                                        >
-                                                            {roles.map(
-                                                                (role) => (
-                                                                    <option
-                                                                        key={
-                                                                            role
-                                                                        }
-                                                                        value={
-                                                                            role
-                                                                        }
-                                                                    >
-                                                                        {role}
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </NativeSelect>
-                                                        <InputError
-                                                            message={
-                                                                errors.role
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="sm:col-span-3">
+                                        </TableCell>
+                                        <TableCell className="px-5 py-3.5 text-right sm:px-6">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <FormDialog
+                                                    trigger={
                                                         <Button
-                                                            type="submit"
+                                                            variant="ghost"
                                                             size="sm"
-                                                            disabled={
-                                                                processing
-                                                            }
                                                         >
-                                                            Save changes
+                                                            <Pencil className="size-3.5" />
+                                                            Edit
                                                         </Button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </Form>
-                                    )}
+                                                    }
+                                                    title={`Edit ${user.name}`}
+                                                    description="Name, address, and security role for this account."
+                                                    icon={Pencil}
+                                                    form={admin.users.update.form(
+                                                        user.id,
+                                                    )}
+                                                    submitLabel="Save changes"
+                                                    submitIcon={Check}
+                                                >
+                                                    {({ errors }) => (
+                                                        <>
+                                                            <FormField
+                                                                label="Full name"
+                                                                error={
+                                                                    errors.name
+                                                                }
+                                                                required
+                                                            >
+                                                                {({
+                                                                    id,
+                                                                    describedBy,
+                                                                    invalid,
+                                                                }) => (
+                                                                    <Input
+                                                                        id={id}
+                                                                        name="name"
+                                                                        autoFocus
+                                                                        defaultValue={
+                                                                            user.name
+                                                                        }
+                                                                        aria-describedby={
+                                                                            describedBy
+                                                                        }
+                                                                        aria-invalid={
+                                                                            invalid
+                                                                        }
+                                                                        className="bg-card"
+                                                                    />
+                                                                )}
+                                                            </FormField>
 
-                                {panel?.id === user.id &&
-                                    panel.kind === 'password' && (
-                                        <Form
-                                            {...admin.users.resetPassword.form(
-                                                user.id,
-                                            )}
-                                            onSuccess={() => setPanel(null)}
-                                            className="mt-4 flex items-end gap-2 rounded-lg border border-border p-4"
-                                        >
-                                            {({ processing, errors }) => (
-                                                <>
-                                                    <div className="grid flex-1 gap-1.5">
-                                                        <Label
-                                                            htmlFor={`password-${user.id}`}
+                                                            <FormField
+                                                                label="Email address"
+                                                                error={
+                                                                    errors.email
+                                                                }
+                                                                required
+                                                            >
+                                                                {({
+                                                                    id,
+                                                                    describedBy,
+                                                                    invalid,
+                                                                }) => (
+                                                                    <Input
+                                                                        id={id}
+                                                                        name="email"
+                                                                        type="email"
+                                                                        defaultValue={
+                                                                            user.email
+                                                                        }
+                                                                        aria-describedby={
+                                                                            describedBy
+                                                                        }
+                                                                        aria-invalid={
+                                                                            invalid
+                                                                        }
+                                                                        className="bg-card"
+                                                                    />
+                                                                )}
+                                                            </FormField>
+
+                                                            <FormField
+                                                                label="Security role"
+                                                                error={
+                                                                    errors.role
+                                                                }
+                                                                required
+                                                            >
+                                                                {({
+                                                                    id,
+                                                                    describedBy,
+                                                                    invalid,
+                                                                }) => (
+                                                                    <RoleSelect
+                                                                        id={id}
+                                                                        name="role"
+                                                                        roles={
+                                                                            roles
+                                                                        }
+                                                                        defaultValue={
+                                                                            user.role
+                                                                        }
+                                                                        describedBy={
+                                                                            describedBy
+                                                                        }
+                                                                        invalid={
+                                                                            invalid
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            </FormField>
+                                                        </>
+                                                    )}
+                                                </FormDialog>
+
+                                                <FormDialog
+                                                    trigger={
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
                                                         >
-                                                            New temporary
-                                                            password
-                                                        </Label>
-                                                        <Input
-                                                            id={`password-${user.id}`}
-                                                            name="password"
-                                                            type="text"
-                                                            autoComplete="off"
-                                                        />
-                                                        <InputError
-                                                            message={
-                                                                errors.password
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <Button
-                                                        type="submit"
-                                                        size="sm"
-                                                        disabled={processing}
-                                                    >
-                                                        Set password
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </Form>
-                                    )}
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            </div>
+                                                            <KeyRound className="size-3.5" />
+                                                            Password
+                                                        </Button>
+                                                    }
+                                                    title={`Reset password for ${user.name}`}
+                                                    description="Any active session keeps working; the new password applies at the next sign-in."
+                                                    icon={KeyRound}
+                                                    form={admin.users.resetPassword.form(
+                                                        user.id,
+                                                    )}
+                                                    submitLabel="Set password"
+                                                    submitIcon={KeyRound}
+                                                >
+                                                    {({ errors }) => (
+                                                        <>
+                                                            <Callout
+                                                                tone="warning"
+                                                                title="Deliver this in person"
+                                                            >
+                                                                A temporary
+                                                                password sent
+                                                                over email or
+                                                                chat is a
+                                                                credential
+                                                                sitting in
+                                                                someone
+                                                                else&rsquo;s
+                                                                inbox.
+                                                            </Callout>
+
+                                                            <FormField
+                                                                label="New temporary password"
+                                                                error={
+                                                                    errors.password
+                                                                }
+                                                                required
+                                                                hint="At least 8 characters."
+                                                            >
+                                                                {({
+                                                                    id,
+                                                                    describedBy,
+                                                                    invalid,
+                                                                }) => (
+                                                                    <Input
+                                                                        id={id}
+                                                                        name="password"
+                                                                        type="text"
+                                                                        autoFocus
+                                                                        autoComplete="off"
+                                                                        aria-describedby={
+                                                                            describedBy
+                                                                        }
+                                                                        aria-invalid={
+                                                                            invalid
+                                                                        }
+                                                                        className="bg-card font-mono"
+                                                                    />
+                                                                )}
+                                                            </FormField>
+                                                        </>
+                                                    )}
+                                                </FormDialog>
+
+                                                {user.is_active && (
+                                                    <ConfirmDialog
+                                                        trigger={
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                            >
+                                                                <UserX className="size-3.5" />
+                                                                Deactivate
+                                                            </Button>
+                                                        }
+                                                        tone="danger"
+                                                        icon={UserX}
+                                                        title="Deactivate this account?"
+                                                        description="They lose access immediately. Their name stays on every audit entry they created."
+                                                        form={admin.users.deactivate.form(
+                                                            user.id,
+                                                        )}
+                                                        confirmLabel="Deactivate account"
+                                                        confirmIcon={UserX}
+                                                        details={
+                                                            <div className="space-y-0.5">
+                                                                <p className="font-medium text-foreground">
+                                                                    {user.name}
+                                                                </p>
+                                                                <p className="font-mono text-xs text-muted-foreground">
+                                                                    {user.email}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground capitalize">
+                                                                    {user.role}
+                                                                </p>
+                                                            </div>
+                                                        }
+                                                    />
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </SectionCard>
+            </PageContainer>
         </>
     );
 }
 
 UserIndex.layout = {
-    breadcrumbs: [{ title: 'Users', href: admin.users.index() }],
+    breadcrumbs: [{ title: 'Staff Users', href: admin.users.index() }],
 };

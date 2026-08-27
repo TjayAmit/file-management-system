@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AccessLogController as WebAdminAccessLogController;
 use App\Http\Controllers\Admin\ActivityController as WebAdminActivityController;
 use App\Http\Controllers\Admin\StorageLocationController as WebAdminStorageLocationController;
 use App\Http\Controllers\Admin\UserController as WebAdminUserController;
@@ -30,6 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('/documents/create', [DocumentController::class, 'create'])->middleware('role:editor,admin')->name('documents.create');
+    Route::get('/documents/qr-labels', [DocumentController::class, 'qrLabels'])->middleware('role:editor,admin')->name('documents.qr-labels');
     Route::get('/documents/{reference}', [DocumentController::class, 'show'])->name('documents.show');
     Route::get('/documents/{reference}/file', [DocumentController::class, 'serveFile'])->middleware('throttle:document-serving')->name('documents.file');
     Route::get('/documents/{reference}/qr-code', [DocumentController::class, 'qrCode'])->name('documents.qr-code');
@@ -70,6 +72,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/activities', [WebAdminActivityController::class, 'index'])->name('activities.index');
+        Route::get('/access-logs', [WebAdminAccessLogController::class, 'index'])->name('access-logs.index');
 
         Route::get('/users', [WebAdminUserController::class, 'index'])->name('users.index');
         Route::post('/users', [WebAdminUserController::class, 'store'])->name('users.store');

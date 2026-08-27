@@ -1,7 +1,15 @@
 import { Head } from '@inertiajs/react';
-import { CircleSlash, Search, Target, TrendingUp } from 'lucide-react';
+import { CircleSlash, Info, Search, Target, TrendingUp } from 'lucide-react';
+import Callout from '@/components/callout';
+import PageContainer from '@/components/page-container';
 import PageHeader from '@/components/page-header';
+import {
+    SectionCard,
+    SectionCardBody,
+    SectionCardHeader,
+} from '@/components/section-card';
 import StatCard from '@/components/stat-card';
+import StatusBadge from '@/components/status-badge';
 import search from '@/routes/search';
 
 type HitRateReport = {
@@ -16,78 +24,120 @@ export default function SearchReport({ report }: { report: HitRateReport }) {
 
     return (
         <>
-            <Head title="Search hit-rate report" />
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <Head title="Hit-Rate Analytics" />
+            <PageContainer>
                 <PageHeader
-                    title="Search hit-rate report"
-                    description="A search counts as a hit when the clerk opened one of its results. Below 60%, staff stop opening the system first and walk to the storage room instead."
+                    title="Search Hit-Rate Report"
+                    icon={TrendingUp}
+                    description="A search counts as a hit when the clerk opened one of its results. Below 60%, staff stop trusting the digital repository first and walk to physical storage instead."
+                    badge={
+                        <StatusBadge
+                            tone={meetsTarget ? 'success' : 'warning'}
+                            dot
+                            pulse={!meetsTarget}
+                        >
+                            {meetsTarget
+                                ? 'Target achieved'
+                                : 'Below benchmark'}
+                        </StatusBadge>
+                    }
                 />
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <StatCard
                         icon={Search}
-                        label="Searches run"
+                        tone="primary"
+                        label="Total searches"
                         value={report.total}
+                        hint="All queries logged across the archive."
                     />
                     <StatCard
                         icon={Target}
-                        label="Hits"
+                        tone="success"
+                        label="Successful hits"
                         value={report.hits}
-                        hint="A result was opened."
+                        hint="Queries ending in an opened document."
                     />
                     <StatCard
                         icon={CircleSlash}
+                        tone="warning"
                         label="Probable misses"
                         value={report.misses}
-                        hint="Nothing was opened — the clerk may also have simply changed their mind."
+                        hint="Queries with no subsequent document view."
                     />
                     <StatCard
                         icon={TrendingUp}
+                        tone={meetsTarget ? 'success' : 'warning'}
                         label="Hit rate"
                         value={`${report.hit_rate}%`}
                         hint={
                             meetsTarget
-                                ? 'At or above the 60% target.'
-                                : 'Below the 60% target.'
+                                ? 'At or above the 60% operational target.'
+                                : 'Below the 60% operational target.'
                         }
                     />
                 </div>
 
-                <section className="rounded-xl border border-border bg-card p-5">
-                    <div className="flex items-baseline justify-between gap-3">
-                        <h2 className="font-semibold">Progress to target</h2>
-                        <span className="text-sm text-muted-foreground tabular-nums">
-                            {report.hit_rate}% of 60%
-                        </span>
-                    </div>
+                <SectionCard>
+                    <SectionCardHeader
+                        title="Benchmark performance"
+                        description="Digital retrieval adoption against the 60% threshold."
+                        icon={Target}
+                        actions={
+                            <span className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+                                    {report.hit_rate}%
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    / 60%
+                                </span>
+                            </span>
+                        }
+                    />
 
-                    <div className="relative mt-4 h-3 overflow-hidden rounded-full bg-muted">
-                        <div
-                            className={
-                                meetsTarget
-                                    ? 'h-full rounded-full bg-primary'
-                                    : 'h-full rounded-full bg-amber-500'
-                            }
-                            style={{
-                                width: `${Math.min(report.hit_rate, 100)}%`,
-                            }}
-                        />
-                        <div
-                            aria-hidden
-                            className="absolute inset-y-0 w-0.5 bg-foreground/50"
-                            style={{ left: '60%' }}
-                        />
-                    </div>
+                    <SectionCardBody className="space-y-6">
+                        <div>
+                            <div className="relative h-3.5 overflow-hidden rounded-full bg-muted">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                        meetsTarget
+                                            ? 'bg-success'
+                                            : 'bg-warning'
+                                    }`}
+                                    style={{
+                                        width: `${Math.min(report.hit_rate, 100)}%`,
+                                    }}
+                                />
+                                <div
+                                    aria-hidden
+                                    title="60% target benchmark"
+                                    className="absolute inset-y-0 w-0.5 bg-foreground"
+                                    style={{ left: '60%' }}
+                                />
+                            </div>
 
-                    <p className="mt-4 text-sm text-pretty text-muted-foreground">
-                        This is a trend, not a verdict. The system cannot tell a
-                        clerk who gave up from one who found the file elsewhere
-                        — linking every upload back to the search that prompted
-                        it was rejected as extra work for an already-rushed
-                        employee. Direction over time is what matters.
-                    </p>
-                </section>
-            </div>
+                            <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
+                                <span>0% baseline</span>
+                                <span className="font-semibold text-foreground">
+                                    60% operational target
+                                </span>
+                                <span>100% full adoption</span>
+                            </div>
+                        </div>
+
+                        <Callout
+                            tone="info"
+                            icon={Info}
+                            title="Reading this number"
+                        >
+                            The rate reflects staff habit and index completeness
+                            together. When it drops, the fix is usually not the
+                            search box — it is encoding the paper that keeps
+                            getting fetched by hand.
+                        </Callout>
+                    </SectionCardBody>
+                </SectionCard>
+            </PageContainer>
         </>
     );
 }

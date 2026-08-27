@@ -1,16 +1,23 @@
 import { Form } from '@inertiajs/react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import {
+    SectionCard,
+    SectionCardBody,
+    SectionCardHeader,
+} from '@/components/section-card';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
+    DialogBody,
     DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
+    DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
@@ -20,52 +27,55 @@ export default function DeleteUser() {
     const passwordInput = useRef<HTMLInputElement>(null);
 
     return (
-        <div className="space-y-6">
-            <Heading
-                variant="small"
+        <SectionCard tone="danger">
+            <SectionCardHeader
                 title="Delete account"
-                description="Delete your account and all of its resources"
+                description="Removes your account and everything attached to it. There is no undo."
+                icon={Trash2}
+                tone="danger"
+                className="border-destructive/20 bg-destructive/[0.04]"
             />
-            <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
-                <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
-                    <p className="font-medium">Warning</p>
-                    <p className="text-sm">
-                        Please proceed with caution, this cannot be undone.
-                    </p>
-                </div>
-
+            <SectionCardBody>
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button
                             variant="destructive"
                             data-test="delete-user-button"
                         >
+                            <Trash2 className="size-4" />
                             Delete account
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                        <DialogTitle>
-                            Are you sure you want to delete your account?
-                        </DialogTitle>
-                        <DialogDescription>
-                            Once your account is deleted, all of its resources
-                            and data will also be permanently deleted. Please
-                            enter your password to confirm you would like to
-                            permanently delete your account.
-                        </DialogDescription>
-
+                    <DialogContent size="sm">
                         <Form
                             {...ProfileController.destroy.form()}
-                            options={{
-                                preserveScroll: true,
-                            }}
+                            options={{ preserveScroll: true }}
                             onError={() => passwordInput.current?.focus()}
                             resetOnSuccess
-                            className="space-y-6"
+                            className="contents"
                         >
                             {({ resetAndClearErrors, processing, errors }) => (
                                 <>
-                                    <div className="grid gap-2">
+                                    <DialogHeader>
+                                        <div className="flex items-start gap-3">
+                                            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive">
+                                                <AlertTriangle className="size-4.5" />
+                                            </span>
+                                            <div className="min-w-0 space-y-1">
+                                                <DialogTitle>
+                                                    Delete your account?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    Everything belonging to this
+                                                    account is permanently
+                                                    removed. Enter your password
+                                                    to confirm.
+                                                </DialogDescription>
+                                            </div>
+                                        </div>
+                                    </DialogHeader>
+
+                                    <DialogBody className="grid gap-2">
                                         <Label
                                             htmlFor="password"
                                             className="sr-only"
@@ -79,15 +89,17 @@ export default function DeleteUser() {
                                             ref={passwordInput}
                                             placeholder="Password"
                                             autoComplete="current-password"
+                                            className="bg-card"
                                         />
 
                                         <InputError message={errors.password} />
-                                    </div>
+                                    </DialogBody>
 
-                                    <DialogFooter className="gap-2">
+                                    <DialogFooter>
                                         <DialogClose asChild>
                                             <Button
-                                                variant="secondary"
+                                                type="button"
+                                                variant="ghost"
                                                 onClick={() =>
                                                     resetAndClearErrors()
                                                 }
@@ -97,16 +109,12 @@ export default function DeleteUser() {
                                         </DialogClose>
 
                                         <Button
+                                            type="submit"
                                             variant="destructive"
-                                            disabled={processing}
-                                            asChild
+                                            pending={processing}
+                                            data-test="confirm-delete-user-button"
                                         >
-                                            <button
-                                                type="submit"
-                                                data-test="confirm-delete-user-button"
-                                            >
-                                                Delete account
-                                            </button>
+                                            Delete account
                                         </Button>
                                     </DialogFooter>
                                 </>
@@ -114,7 +122,7 @@ export default function DeleteUser() {
                         </Form>
                     </DialogContent>
                 </Dialog>
-            </div>
-        </div>
+            </SectionCardBody>
+        </SectionCard>
     );
 }

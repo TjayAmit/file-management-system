@@ -1,14 +1,14 @@
-import { Form, Head } from '@inertiajs/react';
-import { Plus, Warehouse } from 'lucide-react';
-import { useState } from 'react';
+import { Head } from '@inertiajs/react';
+import { Check, Pencil, Plus, Warehouse } from 'lucide-react';
 import EmptyState from '@/components/empty-state';
-import FlashMessage from '@/components/flash-message';
-import InputError from '@/components/input-error';
+import FormDialog from '@/components/form-dialog';
+import FormField from '@/components/form-field';
+import PageContainer from '@/components/page-container';
 import PageHeader from '@/components/page-header';
+import { SectionCard, SectionCardHeader } from '@/components/section-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import admin from '@/routes/admin';
 import storageLocations from '@/routes/storage-locations';
 
@@ -25,160 +25,174 @@ export default function StorageLocationIndex({
     storageLocations: StorageLocationItem[];
     can: { manage: boolean };
 }) {
-    const [editing, setEditing] = useState<number | null>(null);
-
     return (
         <>
-            <Head title="Storage locations" />
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <Head title="Storage Facilities" />
+            <PageContainer>
                 <PageHeader
-                    title="Storage locations"
-                    description="The places a paper original can be: the office itself, or the central storage building across the city."
+                    title="Storage Locations"
+                    icon={Warehouse}
+                    description="The authorised municipal facilities and file rooms where paper originals reside. Staff use these identifiers during physical tracking and batch transfers."
+                    badge={
+                        <Badge variant="secondary" className="rounded-full">
+                            {locations.length} designated
+                        </Badge>
+                    }
+                    actions={
+                        can.manage && (
+                            <FormDialog
+                                trigger={
+                                    <Button>
+                                        <Plus className="size-4" />
+                                        Register facility
+                                    </Button>
+                                }
+                                title="Register storage facility"
+                                description="Only administrators can designate authorised archival facilities. The name is what staff will read off a transfer slip, so make it unambiguous."
+                                icon={Warehouse}
+                                form={admin.storageLocations.store.form()}
+                                submitLabel="Register facility"
+                                submitIcon={Plus}
+                                resetOnSuccess
+                            >
+                                {({ errors }) => (
+                                    <FormField
+                                        label="Facility or room name"
+                                        error={errors.name}
+                                        required
+                                        hint="Include the building when a room name alone could match two places."
+                                    >
+                                        {({ id, describedBy, invalid }) => (
+                                            <Input
+                                                id={id}
+                                                name="name"
+                                                autoFocus
+                                                aria-describedby={describedBy}
+                                                aria-invalid={invalid}
+                                                placeholder="e.g. Central Records Archive, Room 2B"
+                                                className="bg-card"
+                                            />
+                                        )}
+                                    </FormField>
+                                )}
+                            </FormDialog>
+                        )
+                    }
                 />
 
-                <FlashMessage />
+                <SectionCard>
+                    <SectionCardHeader
+                        title="Designated paper repositories"
+                        description="Every location a scanned document can name as the home of its physical original."
+                        icon={Warehouse}
+                    />
 
-                {can.manage && (
-                    <section className="rounded-xl border border-border bg-card lg:max-w-xl">
-                        <header className="border-b border-border px-5 py-4">
-                            <h2 className="font-semibold">Add a location</h2>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Only an admin defines where paper can live.
-                            </p>
-                        </header>
-                        <Form
-                            {...admin.storageLocations.store.form()}
-                            resetOnSuccess
-                            className="grid gap-2 p-5"
-                        >
-                            {({ processing, errors }) => (
-                                <>
-                                    <Label htmlFor="name">Location name</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        placeholder="e.g. Central storage building"
-                                        aria-invalid={Boolean(errors.name)}
-                                    />
-                                    <InputError message={errors.name} />
-                                    <Button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="justify-self-start"
-                                    >
-                                        <Plus />
-                                        Create location
-                                    </Button>
-                                </>
-                            )}
-                        </Form>
-                    </section>
-                )}
-
-                <section className="rounded-xl border border-border bg-card">
                     {locations.length === 0 ? (
                         <EmptyState
                             icon={Warehouse}
                             title="No storage locations defined"
-                            description="Without at least one location, a document cannot say where its paper original is."
+                            description="At least one storage facility is required before a scanned document can record where its physical original lives."
                         />
                     ) : (
-                        <ul className="divide-y divide-border">
+                        <ul className="stagger grid gap-4 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-3 2xl:grid-cols-4">
                             {locations.map((location) => (
-                                <li key={location.id} className="px-5 py-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex min-w-0 items-center gap-3">
-                                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                                <Warehouse className="size-4" />
-                                            </span>
-                                            <span className="truncate font-medium">
+                                <li
+                                    key={location.id}
+                                    className="group flex min-w-0 flex-col justify-between gap-4 rounded-xl border border-border/80 bg-muted/15 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card hover:shadow-sm motion-reduce:hover:translate-y-0"
+                                >
+                                    <div className="flex min-w-0 items-start gap-3">
+                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary transition-colors group-hover:border-primary/35">
+                                            <Warehouse className="size-4.5" />
+                                        </span>
+                                        <div className="min-w-0 space-y-0.5">
+                                            <p className="truncate font-semibold text-foreground">
                                                 {location.name}
-                                            </span>
-                                        </div>
-                                        <div className="flex shrink-0 items-center gap-2">
-                                            {location.documents_count !==
-                                                undefined && (
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="rounded-full font-normal"
-                                                >
-                                                    {location.documents_count}{' '}
-                                                    documents
-                                                </Badge>
-                                            )}
-                                            {can.manage && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        setEditing(
-                                                            editing ===
-                                                                location.id
-                                                                ? null
-                                                                : location.id,
-                                                        )
-                                                    }
-                                                >
-                                                    {editing === location.id
-                                                        ? 'Cancel'
-                                                        : 'Rename'}
-                                                </Button>
-                                            )}
+                                            </p>
+                                            <p className="font-mono text-xs text-muted-foreground">
+                                                Facility #{location.id}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    {can.manage && editing === location.id && (
-                                        <Form
-                                            {...admin.storageLocations.update.form(
-                                                location.id,
-                                            )}
-                                            onSuccess={() => setEditing(null)}
-                                            className="mt-3 flex items-end gap-2"
-                                        >
-                                            {({ processing, errors }) => (
-                                                <>
-                                                    <div className="grid flex-1 gap-1.5">
-                                                        <Label
-                                                            htmlFor={`name-${location.id}`}
-                                                        >
-                                                            New name
-                                                        </Label>
-                                                        <Input
-                                                            id={`name-${location.id}`}
-                                                            name="name"
-                                                            defaultValue={
-                                                                location.name
-                                                            }
-                                                        />
-                                                        <InputError
-                                                            message={
-                                                                errors.name
-                                                            }
-                                                        />
-                                                    </div>
+                                    <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+                                        {location.documents_count !==
+                                        undefined ? (
+                                            <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                                                {location.documents_count}{' '}
+                                                document
+                                                {location.documents_count === 1
+                                                    ? ''
+                                                    : 's'}{' '}
+                                                held
+                                            </span>
+                                        ) : (
+                                            <span />
+                                        )}
+
+                                        {can.manage && (
+                                            <FormDialog
+                                                trigger={
                                                     <Button
-                                                        type="submit"
+                                                        variant="ghost"
                                                         size="sm"
-                                                        disabled={processing}
                                                     >
-                                                        Save
+                                                        <Pencil className="size-3.5" />
+                                                        Rename
                                                     </Button>
-                                                </>
-                                            )}
-                                        </Form>
-                                    )}
+                                                }
+                                                title="Rename storage facility"
+                                                description="Documents already pointing at this facility follow the new name; nothing is moved."
+                                                icon={Pencil}
+                                                form={admin.storageLocations.update.form(
+                                                    location.id,
+                                                )}
+                                                submitLabel="Save name"
+                                                submitIcon={Check}
+                                            >
+                                                {({ errors }) => (
+                                                    <FormField
+                                                        label="Facility name"
+                                                        error={errors.name}
+                                                        required
+                                                    >
+                                                        {({
+                                                            id,
+                                                            describedBy,
+                                                            invalid,
+                                                        }) => (
+                                                            <Input
+                                                                id={id}
+                                                                name="name"
+                                                                autoFocus
+                                                                defaultValue={
+                                                                    location.name
+                                                                }
+                                                                aria-describedby={
+                                                                    describedBy
+                                                                }
+                                                                aria-invalid={
+                                                                    invalid
+                                                                }
+                                                                className="bg-card"
+                                                            />
+                                                        )}
+                                                    </FormField>
+                                                )}
+                                            </FormDialog>
+                                        )}
+                                    </div>
                                 </li>
                             ))}
                         </ul>
                     )}
-                </section>
-            </div>
+                </SectionCard>
+            </PageContainer>
         </>
     );
 }
 
 StorageLocationIndex.layout = {
     breadcrumbs: [
-        { title: 'Storage locations', href: storageLocations.index() },
+        { title: 'Storage Locations', href: storageLocations.index() },
     ],
 };

@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Building2,
+    Eye,
     FileText,
     History,
     LayoutGrid,
@@ -67,6 +68,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Hit-rate report', href: search.report(), icon: TrendingUp },
     { title: 'Users', href: admin.users.index(), icon: Users },
     { title: 'Activity log', href: admin.activities.index(), icon: History },
+    { title: 'Access log', href: admin.accessLogs.index(), icon: Eye },
 ];
 
 export function AppSidebar() {

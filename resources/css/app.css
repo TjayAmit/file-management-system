@@ -202,6 +202,64 @@
     }
 }
 
+/*
+ * Motion primitives.
+ *
+ * Every one of these is a short, single-purpose easing curve rather than a
+ * flourish: a clerk doing forty encodings an hour needs to see that a panel
+ * arrived or a row changed, not to wait on it. Nothing here runs longer than
+ * 320ms, and the reduced-motion block at the bottom of the file turns all of
+ * it off.
+ */
+@keyframes fms-rise {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes fms-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fms-pop {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes fms-sweep {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes fms-flash {
+    0% {
+        background-color: color-mix(in oklab, var(--primary) 16%, transparent);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
 @layer utilities {
     /*
      * Keeps a skip link out of the way until it is focused.
@@ -217,6 +275,106 @@
         white-space: nowrap;
         border-width: 0;
     }
+
+    /* A panel or row entering the page. */
+    .animate-rise {
+        animation: fms-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .animate-fade {
+        animation: fms-fade 200ms ease-out both;
+    }
+
+    .animate-pop {
+        animation: fms-pop 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /*
+     * Draws the eye to a row that just changed -- the confirmation that a
+     * rename or a re-parent landed on the record you meant.
+     */
+    .animate-flash {
+        animation: fms-flash 1.4s ease-out both;
+    }
+
+    /*
+     * Lists stagger their children so a page of results reads as arriving in
+     * order rather than snapping in as one block. Capped at ten so a
+     * hundred-row table never waits a full second to settle.
+     */
+    .stagger > * {
+        animation: fms-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .stagger > *:nth-child(1) {
+        animation-delay: 0ms;
+    }
+    .stagger > *:nth-child(2) {
+        animation-delay: 24ms;
+    }
+    .stagger > *:nth-child(3) {
+        animation-delay: 48ms;
+    }
+    .stagger > *:nth-child(4) {
+        animation-delay: 72ms;
+    }
+    .stagger > *:nth-child(5) {
+        animation-delay: 96ms;
+    }
+    .stagger > *:nth-child(6) {
+        animation-delay: 120ms;
+    }
+    .stagger > *:nth-child(7) {
+        animation-delay: 144ms;
+    }
+    .stagger > *:nth-child(8) {
+        animation-delay: 168ms;
+    }
+    .stagger > *:nth-child(9) {
+        animation-delay: 192ms;
+    }
+    .stagger > *:nth-child(n + 10) {
+        animation-delay: 216ms;
+    }
+
+    /* Loading placeholder that reads as "fetching", not "broken". */
+    .shimmer {
+        background-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            color-mix(in oklab, var(--foreground) 7%, transparent) 50%,
+            transparent 100%
+        );
+        background-size: 200% 100%;
+        animation: fms-sweep 1.6s linear infinite;
+    }
+
+    /*
+     * Scrollbars inside panels. The browser default is a wide grey slab that
+     * breaks the edge of every card it appears in.
+     */
+    .scroll-slim {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+    }
+
+    .scroll-slim::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .scroll-slim::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scroll-slim::-webkit-scrollbar-thumb {
+        border-radius: 9999px;
+        background-color: var(--border);
+    }
+
+    .scroll-slim::-webkit-scrollbar-thumb:hover {
+        background-color: var(--input);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -224,6 +382,7 @@
     *::before,
     *::after {
         animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;

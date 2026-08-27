@@ -1,13 +1,15 @@
-import { Form, Head } from '@inertiajs/react';
-import { GitMerge, Plus, Tags } from 'lucide-react';
-import { useState } from 'react';
+import { Head } from '@inertiajs/react';
+import { Check, GitMerge, Pencil, Plus, Tag, Tags } from 'lucide-react';
+import Callout from '@/components/callout';
 import EmptyState from '@/components/empty-state';
-import FlashMessage from '@/components/flash-message';
-import InputError from '@/components/input-error';
+import FormDialog from '@/components/form-dialog';
+import FormField from '@/components/form-field';
+import PageContainer from '@/components/page-container';
 import PageHeader from '@/components/page-header';
+import { SectionCard, SectionCardHeader } from '@/components/section-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import requestTypes from '@/routes/request-types';
 
@@ -20,223 +22,284 @@ export default function RequestTypeIndex({
     requestTypes: RequestTypeItem[];
     can: { manage: boolean; merge: boolean };
 }) {
-    const [editing, setEditing] = useState<number | null>(null);
-
     return (
         <>
-            <Head title="Request types" />
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <Head title="Request Types" />
+            <PageContainer>
                 <PageHeader
-                    title="Request types"
-                    description="The second-stage narrowing filter. Free text here would fragment the filter, so the list stays controlled."
-                />
-
-                <FlashMessage />
-
-                {can.manage && (
-                    <section className="grid gap-6 lg:grid-cols-2">
-                        <div className="rounded-xl border border-border bg-card">
-                            <header className="border-b border-border px-5 py-4">
-                                <h2 className="font-semibold">
-                                    Add a request type
-                                </h2>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Only when the kind of request is genuinely
-                                    new.
-                                </p>
-                            </header>
-                            <Form
-                                {...requestTypes.store.form()}
-                                resetOnSuccess
-                                className="grid gap-2 p-5"
-                            >
-                                {({ processing, errors }) => (
-                                    <>
-                                        <Label htmlFor="name">Name</Label>
-                                        <Input
-                                            id="name"
-                                            name="name"
-                                            placeholder="e.g. Setback inspection request"
-                                            aria-invalid={Boolean(errors.name)}
-                                        />
-                                        <InputError message={errors.name} />
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="justify-self-start"
-                                        >
-                                            <Plus />
-                                            Create request type
-                                        </Button>
-                                    </>
-                                )}
-                            </Form>
-                        </div>
-
-                        {can.merge && typeList.length > 1 && (
-                            <div className="rounded-xl border border-border bg-card">
-                                <header className="border-b border-border px-5 py-4">
-                                    <h2 className="font-semibold">
-                                        Merge duplicates
-                                    </h2>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Documents move to the type you keep.
-                                    </p>
-                                </header>
-                                <Form
-                                    {...requestTypes.merge.form()}
-                                    className="grid gap-3 p-5 sm:grid-cols-2"
-                                >
-                                    {({ processing, errors }) => (
-                                        <>
-                                            <div className="grid gap-1.5">
-                                                <Label htmlFor="source_request_type_id">
-                                                    Duplicate
-                                                </Label>
-                                                <NativeSelect
-                                                    id="source_request_type_id"
-                                                    name="source_request_type_id"
+                    title="Request Types"
+                    icon={Tags}
+                    description="The second-stage classification filter for municipal documents. Standardised categories are what keep a search for one kind of filing from fragmenting across four spellings of it."
+                    badge={
+                        <Badge variant="secondary" className="rounded-full">
+                            {typeList.length} defined
+                        </Badge>
+                    }
+                    actions={
+                        can.manage && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                {can.merge && typeList.length > 1 && (
+                                    <FormDialog
+                                        trigger={
+                                            <Button variant="outline">
+                                                <GitMerge className="size-4" />
+                                                Merge duplicates
+                                            </Button>
+                                        }
+                                        title="Merge duplicate request types"
+                                        description="Consolidate two categories that mean the same thing."
+                                        icon={GitMerge}
+                                        form={requestTypes.merge.form()}
+                                        submitLabel="Merge classifications"
+                                        submitIcon={GitMerge}
+                                        submitVariant="destructive"
+                                        size="md"
+                                        footerNote="This cannot be undone."
+                                    >
+                                        {({ errors }) => (
+                                            <>
+                                                <Callout
+                                                    tone="warning"
+                                                    title="Every document on the retired type is reclassified"
                                                 >
-                                                    {typeList.map((type) => (
-                                                        <option
-                                                            key={type.id}
-                                                            value={type.id}
-                                                        >
-                                                            {type.name}
-                                                        </option>
-                                                    ))}
-                                                </NativeSelect>
-                                                <InputError
-                                                    message={
+                                                    The duplicate disappears
+                                                    from the directory and its
+                                                    documents move onto the type
+                                                    you keep. Check the
+                                                    direction before you
+                                                    confirm.
+                                                </Callout>
+
+                                                <FormField
+                                                    label="Duplicate to retire"
+                                                    error={
                                                         errors.source_request_type_id
                                                     }
-                                                />
-                                            </div>
-                                            <div className="grid gap-1.5">
-                                                <Label htmlFor="target_request_type_id">
-                                                    Keep
-                                                </Label>
-                                                <NativeSelect
-                                                    id="target_request_type_id"
-                                                    name="target_request_type_id"
+                                                    required
                                                 >
-                                                    {typeList.map((type) => (
-                                                        <option
-                                                            key={type.id}
-                                                            value={type.id}
+                                                    {({
+                                                        id,
+                                                        describedBy,
+                                                        invalid,
+                                                    }) => (
+                                                        <NativeSelect
+                                                            id={id}
+                                                            name="source_request_type_id"
+                                                            aria-describedby={
+                                                                describedBy
+                                                            }
+                                                            aria-invalid={
+                                                                invalid
+                                                            }
+                                                            className="bg-card"
                                                         >
-                                                            {type.name}
-                                                        </option>
-                                                    ))}
-                                                </NativeSelect>
-                                                <InputError
-                                                    message={
+                                                            {typeList.map(
+                                                                (type) => (
+                                                                    <option
+                                                                        key={
+                                                                            type.id
+                                                                        }
+                                                                        value={
+                                                                            type.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            type.name
+                                                                        }
+                                                                    </option>
+                                                                ),
+                                                            )}
+                                                        </NativeSelect>
+                                                    )}
+                                                </FormField>
+
+                                                <FormField
+                                                    label="Primary to retain"
+                                                    error={
                                                         errors.target_request_type_id
                                                     }
-                                                />
-                                            </div>
-                                            <div className="sm:col-span-2">
-                                                <Button
-                                                    type="submit"
-                                                    variant="outline"
-                                                    disabled={processing}
+                                                    required
+                                                    hint="The name that survives, and the one every reclassified document will carry."
                                                 >
-                                                    <GitMerge />
-                                                    Merge
-                                                </Button>
-                                            </div>
-                                        </>
-                                    )}
-                                </Form>
-                            </div>
-                        )}
-                    </section>
-                )}
+                                                    {({
+                                                        id,
+                                                        describedBy,
+                                                        invalid,
+                                                    }) => (
+                                                        <NativeSelect
+                                                            id={id}
+                                                            name="target_request_type_id"
+                                                            aria-describedby={
+                                                                describedBy
+                                                            }
+                                                            aria-invalid={
+                                                                invalid
+                                                            }
+                                                            className="bg-card"
+                                                        >
+                                                            {typeList.map(
+                                                                (type) => (
+                                                                    <option
+                                                                        key={
+                                                                            type.id
+                                                                        }
+                                                                        value={
+                                                                            type.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            type.name
+                                                                        }
+                                                                    </option>
+                                                                ),
+                                                            )}
+                                                        </NativeSelect>
+                                                    )}
+                                                </FormField>
+                                            </>
+                                        )}
+                                    </FormDialog>
+                                )}
 
-                <section className="rounded-xl border border-border bg-card">
+                                <FormDialog
+                                    trigger={
+                                        <Button>
+                                            <Plus className="size-4" />
+                                            Create type
+                                        </Button>
+                                    }
+                                    title="Create request type"
+                                    description="Define a new category only when the nature of the filing is genuinely new. A near-duplicate splits future searches in two."
+                                    icon={Tags}
+                                    form={requestTypes.store.form()}
+                                    submitLabel="Create type"
+                                    submitIcon={Plus}
+                                    resetOnSuccess
+                                >
+                                    {({ errors }) => (
+                                        <FormField
+                                            label="Classification name"
+                                            error={errors.name}
+                                            required
+                                            hint="Word it the way a clerk would describe the request out loud."
+                                        >
+                                            {({ id, describedBy, invalid }) => (
+                                                <Input
+                                                    id={id}
+                                                    name="name"
+                                                    autoFocus
+                                                    aria-describedby={
+                                                        describedBy
+                                                    }
+                                                    aria-invalid={invalid}
+                                                    placeholder="e.g. Setback Inspection Clearance"
+                                                    className="bg-card"
+                                                />
+                                            )}
+                                        </FormField>
+                                    )}
+                                </FormDialog>
+                            </div>
+                        )
+                    }
+                />
+
+                <SectionCard>
+                    <SectionCardHeader
+                        title="Standard classification directory"
+                        description="Every category a document can be filed under."
+                        icon={Tag}
+                    />
+
                     {typeList.length === 0 ? (
                         <EmptyState
                             icon={Tags}
-                            title="No request types yet"
-                            description="Types are created from what staff actually encounter, so the system is never blocked by an unforeseen one."
+                            title="No request types defined"
+                            description="Create request types so staff can classify permits, clearances, and petitions consistently."
                         />
                     ) : (
-                        <ul className="divide-y divide-border">
+                        <ul className="stagger grid gap-3 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3 2xl:grid-cols-4">
                             {typeList.map((type) => (
-                                <li key={type.id} className="px-5 py-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="truncate font-medium">
-                                            {type.name}
+                                <li
+                                    key={type.id}
+                                    className="group flex min-w-0 items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/15 px-4 py-3.5 transition-all duration-200 hover:border-primary/35 hover:bg-card hover:shadow-sm"
+                                >
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                            <Tag className="size-3.5" />
                                         </span>
-                                        {can.manage && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    setEditing(
-                                                        editing === type.id
-                                                            ? null
-                                                            : type.id,
-                                                    )
-                                                }
-                                            >
-                                                {editing === type.id
-                                                    ? 'Cancel'
-                                                    : 'Rename'}
-                                            </Button>
-                                        )}
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-foreground">
+                                                {type.name}
+                                            </p>
+                                            <p className="font-mono text-[11px] text-muted-foreground">
+                                                #{type.id}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    {can.manage && editing === type.id && (
-                                        <Form
-                                            {...requestTypes.update.form(
+                                    {can.manage && (
+                                        <FormDialog
+                                            trigger={
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    aria-label={`Rename ${type.name}`}
+                                                    className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                                >
+                                                    <Pencil className="size-3.5" />
+                                                </Button>
+                                            }
+                                            title="Rename request type"
+                                            description="Documents already classified under this type follow the new name."
+                                            icon={Pencil}
+                                            form={requestTypes.update.form(
                                                 type.id,
                                             )}
-                                            onSuccess={() => setEditing(null)}
-                                            className="mt-3 flex items-end gap-2"
+                                            submitLabel="Save name"
+                                            submitIcon={Check}
                                         >
-                                            {({ processing, errors }) => (
-                                                <>
-                                                    <div className="grid flex-1 gap-1.5">
-                                                        <Label
-                                                            htmlFor={`name-${type.id}`}
-                                                        >
-                                                            New name
-                                                        </Label>
+                                            {({ errors }) => (
+                                                <FormField
+                                                    label="Classification name"
+                                                    error={errors.name}
+                                                    required
+                                                >
+                                                    {({
+                                                        id,
+                                                        describedBy,
+                                                        invalid,
+                                                    }) => (
                                                         <Input
-                                                            id={`name-${type.id}`}
+                                                            id={id}
                                                             name="name"
+                                                            autoFocus
                                                             defaultValue={
                                                                 type.name
                                                             }
-                                                        />
-                                                        <InputError
-                                                            message={
-                                                                errors.name
+                                                            aria-describedby={
+                                                                describedBy
                                                             }
+                                                            aria-invalid={
+                                                                invalid
+                                                            }
+                                                            className="bg-card"
                                                         />
-                                                    </div>
-                                                    <Button
-                                                        type="submit"
-                                                        size="sm"
-                                                        disabled={processing}
-                                                    >
-                                                        Save
-                                                    </Button>
-                                                </>
+                                                    )}
+                                                </FormField>
                                             )}
-                                        </Form>
+                                        </FormDialog>
                                     )}
                                 </li>
                             ))}
                         </ul>
                     )}
-                </section>
-            </div>
+                </SectionCard>
+            </PageContainer>
         </>
     );
 }
 
 RequestTypeIndex.layout = {
-    breadcrumbs: [{ title: 'Request types', href: requestTypes.index() }],
+    breadcrumbs: [{ title: 'Request Types', href: requestTypes.index() }],
 };

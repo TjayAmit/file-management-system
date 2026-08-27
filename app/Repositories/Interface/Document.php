@@ -57,6 +57,14 @@ interface Document
     public function findByReference(string $reference): ?DocumentModel;
 
     /**
+     * Find several documents by their opaque references, for QR label printing.
+     *
+     * @param  array<int, string>  $references
+     * @return Collection<int, DocumentModel>
+     */
+    public function findManyByReference(array $references): Collection;
+
+    /**
      * Search documents narrowed by business, then optionally branch and request type.
      * Sorted by the operative date (approval date, falling back to request date).
      *
@@ -93,6 +101,21 @@ interface Document
      * Record an access log entry when the document PDF is served.
      */
     public function logAccess(DocumentModel $document, User $user, string $action): AccessLog;
+
+    /**
+     * Paginate access-log entries for the admin review page.
+     *
+     * @param  array{action: string|null, user_id: int|null, reference: string|null}  $filters
+     * @return LengthAwarePaginator<int, AccessLog>
+     */
+    public function paginateAccessLogs(array $filters, int $perPage): LengthAwarePaginator;
+
+    /**
+     * The most recent access-log entries for one document, newest first.
+     *
+     * @return Collection<int, AccessLog>
+     */
+    public function accessLogsFor(DocumentModel $document, int $limit = 25): Collection;
 
     /**
      * File a deletion request for a document, hiding it from search while pending.

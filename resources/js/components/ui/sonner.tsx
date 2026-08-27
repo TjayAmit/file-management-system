@@ -1,6 +1,6 @@
-import { useFlashToast } from '@/hooks/use-flash-toast';
-import { useAppearance } from '@/hooks/use-appearance';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
+import { useAppearance } from '@/hooks/use-appearance';
+import { useFlashToast } from '@/hooks/use-flash-toast';
 
 function Toaster({ ...props }: ToasterProps) {
     const { appearance } = useAppearance();
@@ -12,6 +12,17 @@ function Toaster({ ...props }: ToasterProps) {
             theme={appearance}
             className="toaster group"
             position="bottom-right"
+            richColors
+            closeButton
+            duration={4500}
+            expand
+            toastOptions={{
+                classNames: {
+                    toast: 'rounded-xl border shadow-lg',
+                    title: 'text-sm font-medium',
+                    description: 'text-xs',
+                },
+            }}
             style={
                 {
                     '--normal-bg': 'var(--popover)',

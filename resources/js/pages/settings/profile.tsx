@@ -1,12 +1,17 @@
-import { Form, Head, usePage } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { MailWarning, Save, User } from 'lucide-react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import Callout from '@/components/callout';
 import DeleteUser from '@/components/delete-user';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
+import FormField from '@/components/form-field';
+import {
+    SectionCard,
+    SectionCardBody,
+    SectionCardHeader,
+} from '@/components/section-card';
+import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { Auth } from '@/types';
@@ -26,102 +31,109 @@ export default function Profile({
 
     return (
         <>
-            <Head title="Profile settings" />
+            <Head title="Profile Settings" />
 
-            <h1 className="sr-only">Profile settings</h1>
+            <h1 className="sr-only">Profile Settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Profile"
-                    description="Update your name and email address"
+            <SectionCard>
+                <SectionCardHeader
+                    title="Profile information"
+                    description="The name and address other staff see against your entries in the audit log."
+                    icon={User}
+                    actions={
+                        <StatusBadge tone="primary" className="capitalize">
+                            {auth.user.role}
+                        </StatusBadge>
+                    }
                 />
 
-                <Form
-                    {...ProfileController.update.form()}
-                    options={{
-                        preserveScroll: true,
-                    }}
-                    className="space-y-6"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-
-                                <Input
-                                    id="name"
-                                    className="mt-1 block w-full"
-                                    defaultValue={auth.user.name}
-                                    name="name"
+                <SectionCardBody>
+                    <Form
+                        {...ProfileController.update.form()}
+                        options={{ preserveScroll: true }}
+                        className="grid max-w-xl gap-5"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <FormField
+                                    label="Full name"
+                                    error={errors.name}
                                     required
-                                    autoComplete="name"
-                                    placeholder="Full name"
-                                />
+                                >
+                                    {({ id, describedBy, invalid }) => (
+                                        <Input
+                                            id={id}
+                                            name="name"
+                                            required
+                                            autoComplete="name"
+                                            defaultValue={auth.user.name}
+                                            aria-describedby={describedBy}
+                                            aria-invalid={invalid}
+                                            className="bg-card"
+                                        />
+                                    )}
+                                </FormField>
 
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.name}
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    className="mt-1 block w-full"
-                                    defaultValue={auth.user.email}
-                                    name="email"
+                                <FormField
+                                    label="Email address"
+                                    error={errors.email}
                                     required
-                                    autoComplete="username"
-                                    placeholder="Email address"
-                                />
+                                >
+                                    {({ id, describedBy, invalid }) => (
+                                        <Input
+                                            id={id}
+                                            name="email"
+                                            type="email"
+                                            required
+                                            autoComplete="username"
+                                            defaultValue={auth.user.email}
+                                            aria-describedby={describedBy}
+                                            aria-invalid={invalid}
+                                            className="bg-card"
+                                        />
+                                    )}
+                                </FormField>
 
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.email}
-                                />
-                            </div>
-
-                            {mustVerifyEmail &&
-                                auth.user.email_verified_at === null && (
-                                    <div>
-                                        <p className="-mt-4 text-sm text-muted-foreground">
-                                            Your email address is unverified.{' '}
+                                {mustVerifyEmail &&
+                                    auth.user.email_verified_at === null && (
+                                        <Callout
+                                            tone="warning"
+                                            icon={MailWarning}
+                                            title="Your email address is unverified"
+                                        >
                                             <Link
                                                 href={send()}
                                                 as="button"
-                                                className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                                className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary"
                                             >
-                                                Click here to re-send the
-                                                verification email.
+                                                Resend the verification email
                                             </Link>
-                                        </p>
+                                            {status ===
+                                                'verification-link-sent' && (
+                                                <span className="mt-2 block font-medium text-success">
+                                                    A new verification link has
+                                                    been sent.
+                                                </span>
+                                            )}
+                                        </Callout>
+                                    )}
 
-                                        {status ===
-                                            'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has been
-                                                sent to your email address.
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                            <div className="flex items-center gap-4">
                                 <Button
-                                    disabled={processing}
+                                    type="submit"
+                                    pending={processing}
                                     data-test="update-profile-button"
+                                    className="justify-self-start"
                                 >
-                                    Save
+                                    {!processing && (
+                                        <Save className="size-3.5" />
+                                    )}
+                                    Save profile changes
                                 </Button>
-                            </div>
-                        </>
-                    )}
-                </Form>
-            </div>
+                            </>
+                        )}
+                    </Form>
+                </SectionCardBody>
+            </SectionCard>
 
             <DeleteUser />
         </>
@@ -129,10 +141,5 @@ export default function Profile({
 }
 
 Profile.layout = {
-    breadcrumbs: [
-        {
-            title: 'Profile settings',
-            href: edit(),
-        },
-    ],
+    breadcrumbs: [{ title: 'Profile Settings', href: edit() }],
 };

@@ -1,32 +1,34 @@
 import { Head } from '@inertiajs/react';
+import { Palette } from 'lucide-react';
 import AppearanceTabs from '@/components/appearance-tabs';
-import Heading from '@/components/heading';
+import {
+    SectionCard,
+    SectionCardBody,
+    SectionCardHeader,
+} from '@/components/section-card';
 import { edit as editAppearance } from '@/routes/appearance';
 
 export default function Appearance() {
     return (
         <>
-            <Head title="Appearance settings" />
+            <Head title="Theme & Appearance" />
 
-            <h1 className="sr-only">Appearance settings</h1>
+            <h1 className="sr-only">Theme & Appearance Settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Appearance settings"
-                    description="Update the appearance settings for your account"
+            <SectionCard>
+                <SectionCardHeader
+                    title="Theme and colour mode"
+                    description="Saved per device. System follows whatever this machine is set to."
+                    icon={Palette}
                 />
-                <AppearanceTabs />
-            </div>
+                <SectionCardBody>
+                    <AppearanceTabs />
+                </SectionCardBody>
+            </SectionCard>
         </>
     );
 }
 
 Appearance.layout = {
-    breadcrumbs: [
-        {
-            title: 'Appearance settings',
-            href: editAppearance(),
-        },
-    ],
+    breadcrumbs: [{ title: 'Theme & Appearance', href: editAppearance() }],
 };
